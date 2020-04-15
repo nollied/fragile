@@ -8,7 +8,7 @@ import pytest
 
 from fragile.core.functions import relativize
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import NUMPY_IGNORE_WARNINGS_PARAMS
+from fragile.core.utils import float_type, NUMPY_IGNORE_WARNINGS_PARAMS
 from fragile.core.walkers import Walkers
 
 
@@ -196,6 +196,6 @@ class TestWalkers:
         with numpy.errstate(**NUMPY_IGNORE_WARNINGS_PARAMS):
             walkers.env_states.update(observs=observs)
             walkers.calculate_distances()
-            assert isinstance(walkers.states.distances[0], numpy.float32)
+            assert isinstance(walkers.states.distances[0], float_type)
             assert len(walkers.states.distances.shape) == 1
             assert walkers.states.distances.shape[0] == walkers.n

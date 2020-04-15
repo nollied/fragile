@@ -193,17 +193,25 @@ class ReplayCreator:
             total=self.target_memory_size, disable=not self.show_pbar, desc="Generated examples"
         ) as pbar:
             while self.memory_length < self.target_memory_size:
-                if memorize_id is not None:  # Update remote memory and pbar progress
-                    ray.get(memorize_id)
-                    new_mem_len = self.get_memory_length()
-                    pbar_update = new_mem_len - self.memory_length
-                    self.memory_length = new_mem_len
-                    if self.memory_length > self.target_memory_size:
-                        pbar.total = self.memory_length
-                    pbar.update(pbar_update)
-                # Send update to memory an run swarm again
-                ready_swarms, _ = ray.wait(list(swarm_runs))
-                ready_swarm_id = ready_swarms[0]
-                swarm = swarm_runs.pop(ready_swarm_id)
-                memorize_id = self.memory.memorize.remote(ready_swarm_id)
-                swarm_runs[swarm.run.remote()] = swarm
+                try:
+                    if memorize_id is not None:  # Update remote memory and pbar progress
+                        ray.get(memorize_id)
+                        new_mem_len = self.get_memory_length()
+                        pbar_update = new_mem_len - self.memory_length
+                        self.memory_length = new_mem_len
+                        if self.memory_length > self.target_memory_size:
+                            pbar.total = self.memory_length
+                        pbar.update(pbar_update)
+                    # Send update to memory an run swarm again
+                    ready_swarms, _ = ray.wait(list(swarm_runs))
+                    ready_swarm_id = ready_swarms[0]
+                    swarm = swarm_runs.pop(ready_swarm_id)
+                    memorize_id = self.memory.memorize.remote(ready_swarm_id)
+                    swarm_runs[swarm.run.remote()] = swarm
+                except (KeyboardInterrupt, Exception) as e:
+                    if not isinstance(e, KeyboardInterrupt):
+                        self._log.warning(
+                            "Stopped due to unhandled exception: %s\n %s"
+                            % (e.__class__.__name__, e)
+                        )
+                    break

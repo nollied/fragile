@@ -44,7 +44,7 @@ class Environment(BaseEnvironment):
         :class:`Environment`.
         """
         params = {
-            "states": {"size": self.states_shape, "dtype": numpy.int64},
+            "states": {"size": self.states_shape, "dtype": numpy.float64},
             "observs": {"size": self.observs_shape, "dtype": numpy.float32},
             "rewards": {"dtype": numpy.float32},
             "oobs": {"dtype": numpy.bool_},
