@@ -318,7 +318,11 @@ class Swarm(BaseSwarm):
                 if self.epoch % report_interval == 0 and self.epoch > 0:
                     self.report_progress()
                 self.increment_epoch()
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, Exception) as e:
+                if not isinstance(e, KeyboardInterrupt):
+                    self._log.warning(
+                        "Stopped due to unhandled exception: %s\n %s" % (e.__class__.__name__, e)
+                    )
                 break
 
     def get_run_loop(self, show_pbar: bool = None) -> Iterable[int]:

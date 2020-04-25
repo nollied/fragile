@@ -21,6 +21,7 @@ class Function(Environment):
         function: Callable[[numpy.ndarray], numpy.ndarray],
         bounds: Bounds,
         custom_domain_check: Callable[[numpy.ndarray], numpy.ndarray] = None,
+        actions_as_perturbations: bool = True,
     ):
         """
         Initialize a :class:`Function`.
@@ -37,6 +38,10 @@ class Function(Environment):
                     input and returns an array of booleans. Each ``True`` value \
                     indicates that the corresponding point is **outside**  the \
                     ``custom_domain_check``.
+            actions_as_perturbations: If ``True`` the actions are interpreted as \
+                    perturbations that will be applied to the past states. \
+                    If ``False`` the actions are interpreted as the new states to \
+                    be evaluated.
 
         """
         if not isinstance(bounds, Bounds):
@@ -44,7 +49,13 @@ class Function(Environment):
         self.function = function
         self.bounds = bounds
         self.custom_domain_check = custom_domain_check
+        self._actions_as_perturbations = actions_as_perturbations
         super(Function, self).__init__(observs_shape=self.shape, states_shape=self.shape)
+
+    @property
+    def n_dims(self) -> int:
+        """Return the number of dimensions of the function to be optimized."""
+        return len(self.bounds)
 
     @property
     def shape(self) -> Tuple[int, ...]:
@@ -141,7 +152,7 @@ class Function(Environment):
              "oobs": boolean array}``
 
         """
-        new_points = actions + observs
+        new_points = actions + observs if self._actions_as_perturbations else actions
         oobs = self.calculate_oobs(points=new_points)
         rewards = self.function(new_points).flatten()
         data = {"states": new_points, "observs": new_points, "rewards": rewards, "oobs": oobs}

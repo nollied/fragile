@@ -572,6 +572,7 @@ class StatesWalkers(States):
         clone, compas = self.will_clone, self.compas_clone
         self.cum_rewards[clone] = copy.deepcopy(self.cum_rewards[compas][clone])
         self.id_walkers[clone] = copy.deepcopy(self.id_walkers[compas][clone])
+        self.virtual_rewards[clone] = copy.deepcopy(self.virtual_rewards[compas][clone])
         return clone, compas
 
     def reset(self):

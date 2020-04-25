@@ -14,3 +14,10 @@ warnings.filterwarnings(
         "documentation for alternative uses"
     ),
 )
+warnings.filterwarnings(
+    "ignore",
+    message=(
+        "The datapath rcparam was deprecated in Matplotlib 3.2.1 and will be "
+        "removed two minor releases later."
+    ),
+)

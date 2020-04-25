@@ -31,6 +31,13 @@ warnings.filterwarnings(
         "instead."
     ),
 )
+warnings.filterwarnings(
+    "ignore",
+    message=(
+        "The datapath rcparam was deprecated in Matplotlib 3.2.1 and will be "
+        "removed two minor releases later."
+    ),
+)
 warnings.filterwarnings("ignore", message="Gdk.Cursor.new is deprecated")
 
 from fragile.core import slogging  # noqa: E402

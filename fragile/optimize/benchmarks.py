@@ -35,6 +35,10 @@ def styblinski_tang(x) -> np.ndarray:
     return np.sum(x ** 4 - 16 * x ** 2 + 5 * x, 1) / 2.0
 
 
+def rosenbrock(x) -> np.ndarray:
+    return 100 * np.sum((x[:, :-2] ** 2 - x[:, 1:-1]) ** 2, 1) + np.sum((x[:, :-2] - 1) ** 2, 1)
+
+
 @jit(nopython=True)
 def _lennard_fast(state):
     state = state.reshape(-1, 3)
@@ -66,9 +70,9 @@ class OptimBenchmark(Function):
     benchmark = None
     best_state = None
 
-    def __init__(self, dims: int, function: Callable):
+    def __init__(self, dims: int, function: Callable, *args, **kwargs):
         bounds = self.get_bounds(dims=dims)
-        super(OptimBenchmark, self).__init__(bounds=bounds, function=function)
+        super(OptimBenchmark, self).__init__(bounds=bounds, function=function, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims: int) -> Bounds:
@@ -78,8 +82,8 @@ class OptimBenchmark(Function):
 class Sphere(OptimBenchmark):
     benchmark = 0.0
 
-    def __init__(self, dims: int):
-        super(Sphere, self).__init__(dims=dims, function=sphere)
+    def __init__(self, dims: int, *args, **kwargs):
+        super(Sphere, self).__init__(dims=dims, function=sphere, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims):
@@ -94,8 +98,8 @@ class Sphere(OptimBenchmark):
 class Rastrigin(OptimBenchmark):
     benchmark = 0
 
-    def __init__(self, dims: int):
-        super(Rastrigin, self).__init__(dims=dims, function=rastrigin)
+    def __init__(self, dims: int, *args, **kwargs):
+        super(Rastrigin, self).__init__(dims=dims, function=rastrigin, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims):
@@ -110,8 +114,8 @@ class Rastrigin(OptimBenchmark):
 class EggHolder(OptimBenchmark):
     benchmark = -959.64066271
 
-    def __init__(self, dims: int = None):
-        super(EggHolder, self).__init__(dims=2, function=eggholder)
+    def __init__(self, dims: int = None, *args, **kwargs):
+        super(EggHolder, self).__init__(dims=2, function=eggholder, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims=None):
@@ -124,8 +128,8 @@ class EggHolder(OptimBenchmark):
 
 
 class StyblinskiTang(OptimBenchmark):
-    def __init__(self, dims: tuple):
-        super(StyblinskiTang, self).__init__(dims=dims, function=styblinski_tang)
+    def __init__(self, dims: int, *args, **kwargs):
+        super(StyblinskiTang, self).__init__(dims=dims, function=styblinski_tang, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims):
@@ -139,6 +143,24 @@ class StyblinskiTang(OptimBenchmark):
     @property
     def benchmark(self):
         return -39.16617 * self.shape[0]
+
+
+class Rosenbrock(OptimBenchmark):
+    def __init__(self, dims: int, *args, **kwargs):
+        super(Rosenbrock, self).__init__(dims=dims, function=rosenbrock, *args, **kwargs)
+
+    @staticmethod
+    def get_bounds(dims):
+        bounds = [(-10.0, 10.0) for _ in range(dims)]
+        return Bounds.from_tuples(bounds)
+
+    @property
+    def best_state(self):
+        return np.ones(self.shape)
+
+    @property
+    def benchmark(self):
+        return 0.0
 
 
 class LennardJones(OptimBenchmark):
@@ -169,11 +191,11 @@ class LennardJones(OptimBenchmark):
 
     benchmark = None
 
-    def __init__(self, n_atoms: int = 10, *args, **kwargs):
+    def __init__(self, n_atoms: int = 10, dims=None, *args, **kwargs):
         self.n_atoms = n_atoms
         dims = 3 * n_atoms
         self.benchmark = [np.zeros(self.n_atoms * 3), self.minima.get(str(int(n_atoms)), 0)]
-        super(LennardJones, self).__init__(dims=dims, function=lennard_jones)
+        super(LennardJones, self).__init__(dims=dims, function=lennard_jones, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims):
