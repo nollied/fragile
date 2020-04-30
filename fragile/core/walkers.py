@@ -152,6 +152,11 @@ class SimpleWalkers(BaseWalkers):
         return self._model_states
 
     @property
+    def best_time(self) -> numpy.ndarray:
+        """Return the state of the best walker found in the current algorithm run."""
+        return self.states.best_time
+
+    @property
     def best_state(self) -> numpy.ndarray:
         """Return the state of the best walker found in the current algorithm run."""
         return self.states.best_state
@@ -333,6 +338,9 @@ class SimpleWalkers(BaseWalkers):
                 self._accumulate_and_update_rewards(kwargs["rewards"])
                 del kwargs["rewards"]
             self.states.update(**kwargs)
+        if model_states is not None and "dt" in model_states.keys():
+            times = self.model_states.get("dt") + self.states.get("times")
+            self.states.update(times=times)
         if isinstance(env_states, StatesEnv):
             self._env_states.update(env_states)
             if hasattr(env_states, "rewards"):
@@ -572,6 +580,7 @@ class Walkers(SimpleWalkers):
                 best_state=best_state,
                 best_obs=best_obs,
                 best_id=copy.copy(self.states.id_walkers[ix]),
+                best_time=copy.copy(self.states.times[ix]),
             )
 
     def fix_best(self):
@@ -582,6 +591,7 @@ class Walkers(SimpleWalkers):
             self.states.cum_rewards[-1] = float(self.states.best_reward)
             self.states.id_walkers[-1] = copy.copy(self.states.best_id)
             self.env_states.states[-1] = self.states.best_state.copy()
+            self.states.times[-1] = copy.copy(self.states.best_time)
 
     def reset(
         self,

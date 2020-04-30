@@ -1,4 +1,5 @@
 import copy
+import traceback
 from typing import Callable
 
 import ray
@@ -244,8 +245,10 @@ class RemoteSwarm(CoreSwarm):
                 self.increment_epoch()
             except (KeyboardInterrupt, Exception) as e:
                 if not isinstance(e, KeyboardInterrupt):
+                    tb = traceback.format_exc()
+                    name = e.__class__.__name__
                     self._log.warning(
-                        "Stopped due to unhandled exception: %s\n %s" % (e.__class__.__name__, e)
+                        "Stopped due to unhandled exception: %s\n %s\n %s" % (name, e, tb)
                     )
                 break
         return self

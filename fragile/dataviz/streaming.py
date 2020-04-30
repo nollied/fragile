@@ -425,7 +425,7 @@ class Histogram(StreamingPlot):
 
         """
         if data is None:
-            data = numpy.zeros(10)
+            data = numpy.arange(10)
         data[numpy.isnan(data)] = 0.0
         return numpy.histogram(data, self.n_bins), self.xlim
 
