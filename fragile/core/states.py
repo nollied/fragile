@@ -541,6 +541,8 @@ class StatesWalkers(States):
         self.best_obs = None
         self.best_state = None
         self.best_reward = -numpy.inf
+        self.best_time = 0
+        self.times = None
         updated_dict = self.get_params_dict()
         if state_dict is not None:
             updated_dict.update(state_dict)
@@ -555,6 +557,7 @@ class StatesWalkers(States):
         params = {
             "id_walkers": {"dtype": hash_type},
             "compas_clone": {"dtype": numpy.int64},
+            "times": {"dtype": numpy.int64},
             "processed_rewards": {"dtype": float_type},
             "virtual_rewards": {"dtype": float_type},
             "cum_rewards": {"dtype": float_type},
@@ -573,6 +576,7 @@ class StatesWalkers(States):
         self.cum_rewards[clone] = copy.deepcopy(self.cum_rewards[compas][clone])
         self.id_walkers[clone] = copy.deepcopy(self.id_walkers[compas][clone])
         self.virtual_rewards[clone] = copy.deepcopy(self.virtual_rewards[compas][clone])
+        self.times[clone] = copy.deepcopy(self.times[compas][clone])
         return clone, compas
 
     def reset(self):
@@ -585,6 +589,7 @@ class StatesWalkers(States):
             id_walkers=numpy.zeros(self.n, dtype=hash_type),
             compas_dist=numpy.arange(self.n),
             compas_clone=numpy.arange(self.n),
+            times=numpy.zeros(self.n, dtype=numpy.int64),
             processed_rewards=numpy.zeros(self.n, dtype=float_type),
             cum_rewards=numpy.zeros(self.n, dtype=float_type),
             virtual_rewards=numpy.ones(self.n, dtype=float_type),
@@ -618,6 +623,7 @@ class OneWalker(States):
         observ: numpy.ndarray,
         reward: Scalar,
         id_walker=None,
+        time=0,
         state_dict: StateDict = None,
         **kwargs
     ):
@@ -631,6 +637,8 @@ class OneWalker(States):
             id_walker: Hash of the provided State. If None it will be calculated when the
                        the :class:`OneWalker` is initialized.
             state_dict: External :class:`StateDict` that overrides the default values.
+            time: Time step of the current walker. Measures the length of the path followed \
+                  by the walker.
             **kwargs: Additional data needed to define the walker. Its structure \
                       needs to be defined in the provided ``state_dict``. These attributes
                       will be assigned to the :class:`EnvStates` of the :class:`Swarm`.
@@ -640,10 +648,12 @@ class OneWalker(States):
         self.rewards = None
         self.observs = None
         self.states = None
+        self.times = None
         self._observs_size = observ.shape
         self._observs_dtype = observ.dtype
         self._states_size = state.shape
         self._states_dtype = state.dtype
+        self._times_dtype = numpy.int64
         self._rewards_dtype = type(reward)
         # Accept external definition of param_dict values
         walkers_dict = self.get_params_dict()
@@ -665,6 +675,7 @@ class OneWalker(States):
         self.observs[:] = copy.deepcopy(observ)
         self.states[:] = copy.deepcopy(state)
         self.rewards[:] = copy.deepcopy(reward)
+        self.times[:] = copy.deepcopy(time)
         self.id_walkers[:] = (
             copy.deepcopy(id_walker) if id_walker is not None else hash_numpy(state)
         )
@@ -674,11 +685,13 @@ class OneWalker(States):
         with numpy.printoptions(linewidth=100, threshold=200, edgeitems=9):
             string = (
                 "reward: %s\n"
+                "time: %s\n"
                 "observ: %s\n"
                 "state: %s\n"
                 "id: %s"
                 % (
                     self.rewards[0],
+                    self.times[0],
                     self.observs[0].flatten(),
                     self.states[0].flatten(),
                     self.id_walkers[0],
@@ -695,5 +708,6 @@ class OneWalker(States):
             "rewards": {"dtype": self._rewards_dtype},
             "observs": {"dtype": self._observs_dtype, "size": self._observs_size},
             "states": {"dtype": self._states_dtype, "size": self._states_size},
+            "times": {"dtype": self._times_dtype},
         }
         return params

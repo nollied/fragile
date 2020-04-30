@@ -298,5 +298,3 @@ class TestCMAES:
         assert np.allclose(
             det_cmaes.invsqrtC, invsqrt_cov_iter_1, rtol=1e-6, atol=1e-6
         ), "dif: %s" % (det_cmaes.invsqrtC - invsqrt_cov_iter_1)
-
-

@@ -1,5 +1,6 @@
 import copy
 import logging
+import traceback
 from typing import Any, Callable, Iterable, List
 
 import numpy
@@ -112,6 +113,11 @@ class Swarm(BaseSwarm):
         evolution process.
         """
         return self._walkers
+
+    @property
+    def best_time(self) -> numpy.ndarray:
+        """Return the state of the best walker found in the current algorithm run."""
+        return self.walkers.best_time
 
     @property
     def best_state(self) -> numpy.ndarray:
@@ -320,8 +326,10 @@ class Swarm(BaseSwarm):
                 self.increment_epoch()
             except (KeyboardInterrupt, Exception) as e:
                 if not isinstance(e, KeyboardInterrupt):
+                    tb = traceback.format_exc()
+                    name = e.__class__.__name__
                     self._log.warning(
-                        "Stopped due to unhandled exception: %s\n %s" % (e.__class__.__name__, e)
+                        "Stopped due to unhandled exception: %s\n %s\n %s" % (name, e, tb)
                     )
                 break
 

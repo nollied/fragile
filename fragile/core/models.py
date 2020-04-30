@@ -19,12 +19,13 @@ class Model(BaseModel):
     the calculated actions into its corresponding :class:`States`.
     """
 
-    def __init__(self, critic: Optional[BaseCritic] = None):
+    def __init__(self, critic: Optional[BaseCritic] = None, env=None):
         """
         Initialize a :class:`Model`.
 
         Args:
             critic: :class:`Critic` used to calculate an additional value.
+            env: Ignored. Used to match callable initialization inside a swarm.
 
         """
         self.critic: BaseCritic = critic

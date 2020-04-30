@@ -231,7 +231,7 @@ class FollowBestModel(RootModel):
         init_actions = walkers.states.init_actions.flatten().astype(int)
         best_ix = walkers.get_best_index()
         root_model_states = StatesModel(
-            batch_size=1, state_dict={"actions": {"dtype": int}, "dt": {"dtype": int}}
+            batch_size=1, state_dict={"actions": {"dtype": numpy.int64}, "dt": {"dtype": int}}
         )
         root_model_states.actions[:] = init_actions[best_ix]
         if hasattr(root_model_states, "dt"):
@@ -374,6 +374,7 @@ class StepSwarm(Swarm):
             reward=self.root_env_states.rewards[0],
             observ=self.root_env_states.observs[0],
             state=self.root_env_states.states[0],
+            time=0,
         )
         self._notebook_container = None
         self._use_notebook_widget = use_notebook_widget
@@ -393,6 +394,11 @@ class StepSwarm(Swarm):
     def max_epochs(self) -> int:
         """Return the maximum number of epochs allowed."""
         return self._max_epochs
+
+    @property
+    def best_time(self) -> numpy.ndarray:
+        """Return the state of the best walker found in the current algorithm run."""
+        return self.root_walker.times[0]
 
     @property
     def best_state(self) -> numpy.ndarray:
@@ -470,6 +476,7 @@ class StepSwarm(Swarm):
             reward=self.root_env_states.rewards[best_index],
             observ=self.root_env_states.observs[best_index],
             state=self.root_env_states.states[best_index],
+            time=0,
         )
         if self.tree is not None:
             self.tree.reset(
@@ -542,15 +549,19 @@ class StepSwarm(Swarm):
             cum_rewards = cum_rewards + self.root_env_states.rewards
         else:
             cum_rewards = self.root_env_states.rewards
+
+        times = self.root_walkers_states.times + self.root_walker.times
         self.root_walkers_states.update(
             cum_rewards=cum_rewards,
             id_walkers=numpy.array([hash_numpy(self.root_env_states.states[0])]),
+            times=times,
         )
 
         self.root_walker = OneWalker(
             reward=copy.deepcopy(cum_rewards[0]),
             observ=copy.deepcopy(self.root_env_states.observs[0]),
             state=copy.deepcopy(self.root_env_states.states[0]),
+            time=copy.deepcopy(times[0]),
         )
 
 
@@ -589,12 +600,15 @@ class StepToBest(StepSwarm):
         """Update the data of the root walker after an internal Swarm iteration has finished."""
         # The accumulation of rewards is already done in the internal Swarm
         cum_rewards = self.root_walkers_states.cum_rewards
+        times = self.root_walkers_states.times + self.root_walker.times
         self.root_walkers_states.update(
             cum_rewards=cum_rewards,
             id_walkers=numpy.array([hash_numpy(self.root_env_states.states[0])]),
+            times=times,
         )
         self.root_walker = OneWalker(
             reward=copy.deepcopy(cum_rewards[0]),
             observ=copy.deepcopy(self.root_env_states.observs[0]),
             state=copy.deepcopy(self.root_env_states.states[0]),
+            time=copy.deepcopy(times[0]),
         )
