@@ -22,7 +22,7 @@ class DistributedExport:
     def __init__(
         self,
         swarm: Callable,
-        n_swarms: 2,
+        n_swarms: int = 2,
         n_import: int = 2,
         n_export: int = 2,
         export_best: bool = True,

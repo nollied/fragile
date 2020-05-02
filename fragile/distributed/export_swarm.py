@@ -36,6 +36,8 @@ class ExportedWalkers(States):
                 if k in walkers_dict:
                     walkers_dict[k] = v
         super(ExportedWalkers, self).__init__(batch_size=batch_size, state_dict=walkers_dict)
+        # Set to ones to avoid empty sequences that may cause errors
+        self.update(id_walkers=numpy.ones(self.n, dtype=hash_type))
 
     def get_params_dict(self) -> StateDict:
         """Return a dictionary containing the param_dict to build an instance \
@@ -93,6 +95,7 @@ class BestWalker(ExportedWalkers):
         """
         super(BestWalker, self).__init__(1)
         self.minimize = minimize
+        self.rewards[:] = numpy.inf if self.minimize else -numpy.inf
 
     def update_best(self, walkers: ExportedWalkers):
         """
@@ -148,6 +151,8 @@ class ExportSwarm(SwarmWrapper):
         self.n_export = n_export
         self._export_best = export_best
         self._import_best = import_best
+        if not isinstance(swarm, Swarm):
+            swarm = swarm()
         super(ExportSwarm, self).__init__(swarm, name="swarm")
 
     def run_exchange_step(self, walkers: ExportedWalkers) -> ExportedWalkers:
