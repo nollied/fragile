@@ -371,6 +371,18 @@ class ParallelEnv(EnvWrapper):
             return getattr(self._local_env, item)
         return self._local_env.__getattribute__(item)
 
+    def __call__(self, *args, **kwargs) -> "ParallelEnv":
+        """
+        Return the current instance of :class:`BaseEnvironment`.
+
+        This is used to avoid defining a ``environment_callable `` as \
+        ``lambda: environment_instance`` when initializing a :class:`Swarm`. If the \
+        :class:`Environment` needs is passed to a remote process, you may need \
+        to write custom serialization for it, or resort to creating an appropriate \
+        ``environment_callable``.
+        """
+        return self
+
     def close(self):
         """Close the processes created by the internal parallel_environment."""
         return self.parallel_env.close()
@@ -387,13 +399,21 @@ class ParallelEnv(EnvWrapper):
             States containing the information that describes the new state of the Environment.
 
         """
-        return self._local_env.__class__.step(
-            self, model_states=model_states, env_states=env_states
-        )
+        transition_data = self.states_to_data(model_states=model_states, env_states=env_states)
+        if not isinstance(transition_data, (dict, tuple)):
+            raise ValueError(
+                "The returned values from states_to_data need to "
+                "be an instance of dict or tuple. "
+                "Got %s instead" % type(transition_data)
+            )
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, numpy.ndarray]:
-        """Use the underlying parallel environment to calculate the state transitions."""
-        return self.parallel_env.make_transitions(*args, **kwargs)
+        new_data = (
+            self.parallel_env.make_transitions(*transition_data)
+            if isinstance(transition_data, tuple)
+            else self.parallel_env.make_transitions(**transition_data)
+        )
+        new_env_state = self.states_from_data(len(env_states), **new_data)
+        return new_env_state
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
@@ -450,6 +470,18 @@ class RayEnv(EnvWrapper):
             for _ in range(n_workers)
         ]
         super(RayEnv, self).__init__(env_callable(), name="_local_env")
+
+    def __call__(self, *args, **kwargs) -> "RayEnv":
+        """
+        Return the current instance of :class:`BaseEnvironment`.
+
+        This is used to avoid defining a ``environment_callable `` as \
+        ``lambda: environment_instance`` when initializing a :class:`Swarm`. If the \
+        :class:`Environment` needs is passed to a remote process, you may need \
+        to write custom serialization for it, or resort to creating an appropriate \
+        ``environment_callable``.
+        """
+        return self
 
     def step(self, model_states: StatesModel, env_states: StatesEnv) -> StatesEnv:
         """
