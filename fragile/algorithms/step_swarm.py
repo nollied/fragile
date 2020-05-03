@@ -287,6 +287,7 @@ class StepSwarm(Swarm):
         minimize: bool = False,
         use_notebook_widget: bool = True,
         force_logging: bool = False,
+        step_after_improvement: bool = False,
         *args,
         **kwargs
     ):
@@ -355,6 +356,7 @@ class StepSwarm(Swarm):
         self.root_model: RootModel = root_model()
         if reward_limit is None:
             reward_limit = -numpy.inf if self.internal_swarm.walkers.minimize else numpy.inf
+        self.step_after_improvement = step_after_improvement
         self.accumulate_rewards = accumulate_rewards
         self._max_epochs = int(max_epochs)
         self.reward_limit = reward_limit
@@ -532,13 +534,17 @@ class StepSwarm(Swarm):
 
     def step_root_state(self):
         """Make the state transition of the root state."""
-        model_states = self.root_model.predict(
-            root_env_states=self.root_env_states, walkers=self.walkers
-        )
-        parent_id = copy.copy(self.best_id)
-        new_env_states = self.env.step(model_states=model_states, env_states=self.root_env_states)
-        self.update_states(new_env_states, model_states)
-        self.update_tree(states_ids=[parent_id])
+        best_ix = self.walkers.get_best_index() if self.step_after_improvement else None
+        if self._should_step_root_state(best_ix):
+            model_states = self.root_model.predict(
+                root_env_states=self.root_env_states, walkers=self.walkers
+            )
+            parent_id = copy.copy(self.best_id)
+            new_env_states = self.env.step(
+                model_states=model_states, env_states=self.root_env_states
+            )
+            self.update_states(new_env_states, model_states)
+            self.update_tree(states_ids=[parent_id])
 
     def update_states(self, env_states, model_states):
         """Update the data of the root state."""
@@ -564,6 +570,16 @@ class StepSwarm(Swarm):
             time=copy.deepcopy(times[0]),
         )
 
+    def _should_step_root_state(self, best_ix=None):
+        if not self.step_after_improvement:
+            return True
+        if not self.walkers.get("in_bounds").any():
+            return False
+        if self.minimize:
+            return self.walkers.get("cum_rewards")[best_ix] < self.best_reward
+        else:
+            return self.walkers.get("cum_rewards")[best_ix] > self.best_reward
+
 
 class StepToBest(StepSwarm):
     """
@@ -582,19 +598,12 @@ class StepToBest(StepSwarm):
 
     def step_root_state(self):
         """Step the root state to the best walker found during the run of the internal Swarm."""
-        ib = self.walkers.states.in_bounds
-        in_bounds_rewards = self.walkers.get("cum_rewards")[ib]
-        if len(in_bounds_rewards) == 0:
-            best_ix = 0
-        else:
-            best_ix_filtered = int(
-                in_bounds_rewards.argmin() if self.walkers.minimize else in_bounds_rewards.argmax()
-            )
-            best_ix = int(numpy.arange(self.walkers.n)[ib][best_ix_filtered])
-        self.root_env_states = self.walkers.env_states[best_ix]
-        self.root_walkers_states = self.walkers.states[best_ix]
-        self.update_states()
-        self.update_tree([self.best_id])
+        best_ix = self.walkers.get_best_index()
+        if self._should_step_root_state(best_ix):
+            self.root_env_states = self.walkers.env_states[best_ix]
+            self.root_walkers_states = self.walkers.states[best_ix]
+            self.update_states()
+            self.update_tree([self.best_id])
 
     def update_states(self):
         """Update the data of the root walker after an internal Swarm iteration has finished."""
