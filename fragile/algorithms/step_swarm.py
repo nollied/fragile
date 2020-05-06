@@ -3,7 +3,7 @@ from typing import Any, Callable, List, Tuple
 
 import numpy
 
-from fragile.core import Swarm, SwarmWrapper, Walkers
+from fragile.core import Environment, Swarm, SwarmWrapper, Walkers
 from fragile.core.base_classes import BaseModel, BaseTree
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.utils import float_type, hash_numpy, running_in_ipython, Scalar, StateDict
@@ -15,15 +15,17 @@ class StepStatesWalkers(StatesWalkers):
     action selected during the search process, and its corresponding ``dt``.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, actions_shape: Tuple = None, *args, **kwargs):
         """
         Initialize a :walkers-st:`StepStatesWalkers`.
 
         Args:
+            actions_shape: shape of the actions for tracking them in init_actions.
             *args: Passed to :class:`StatesWalkers`.
             **kwargs: Passed to :class:`StatesWalkers`.
 
         """
+        self.actions_shape = actions_shape
         super(StepStatesWalkers, self).__init__(*args, **kwargs)
         self.init_actions = None
         self.init_dts = None
@@ -42,6 +44,8 @@ class StepStatesWalkers(StatesWalkers):
         params_dict = super(StepStatesWalkers, self).get_params_dict()
         step_params = {"init_actions": {"dtype": float_type}, "init_dts": {"dtype": float_type}}
         params_dict.update(step_params)
+        if self.actions_shape is not None:
+            params_dict["init_actions"]["size"] = self.actions_shape
         return params_dict
 
     def clone(self, **kwargs) -> Tuple[numpy.ndarray, numpy.ndarray]:
@@ -136,11 +140,35 @@ class RootModel(BaseModel):
     after performing a search process with its internal :class:`Swarm`.
     """
 
+    def __init__(self, env: Environment = None, model: BaseModel = None):
+        """Initialize a :class:`RootModel`."""
+        self.env = env
+        self.model = model
+
+    def __call__(self, *args, **kwargs):
+        """
+        Return the current instance of :class:`RootModel`.
+
+        This is used to avoid defining a ``model_callable `` as \
+        ``lambda: model_instance`` when initializing a :class:`StepSwarm`. If the \
+        :class:`Environment` needs is passed to a remote process, you may need \
+        to write custom serialization for it, or resort to creating an appropriate \
+        ``model_callable``.
+        """
+        return self
+
     def get_params_dict(self) -> StateDict:
         """Return a :class:`StateDict` that defines discrete actions and time steps."""
-        return {"actions": {"dtype": int}, "dt": {"dtype": int}}
+        params = {"dt": {"dtype": int}}
+        acts = (
+            self.model.get_params_dict()["actions"]
+            if self.model is not None
+            else {"actions": {"dtype": int}}
+        )
+        params.update(acts)
+        return params
 
-    def predict(self, root_env_states: StatesEnv, walkers: StepWalkers,) -> StatesModel:
+    def predict(self, root_env_states: StatesEnv, walkers: StepWalkers) -> StatesModel:
         """
         Sample the actions that the root walker will apply to the :env:`Environment`.
 
@@ -274,8 +302,10 @@ class StepSwarm(Swarm):
     def __init__(
         self,
         n_walkers: int,
+        env: Callable[[], Environment],
+        model: Callable[[Environment], BaseModel],
         step_epochs: int = None,
-        root_model: Callable[[], RootModel] = MajorityDiscreteModel,
+        root_model: Callable[[Environment, BaseModel], RootModel] = MajorityDiscreteModel,
         tree: Callable[[], BaseTree] = None,
         report_interval: int = numpy.inf,
         show_pbar: bool = True,
@@ -287,6 +317,7 @@ class StepSwarm(Swarm):
         minimize: bool = False,
         use_notebook_widget: bool = True,
         force_logging: bool = False,
+        step_after_improvement: bool = False,
         *args,
         **kwargs
     ):
@@ -302,6 +333,8 @@ class StepSwarm(Swarm):
 
         Args:
             n_walkers: Number of walkers of the internal swarm.
+            env: A callable that returns an instance of an :class:`Environment`.
+            model: A callable that returns an instance of a :class:`Model`.
             step_epochs: Number of epochs that the internal swarm will be run \
                          before sampling an action.
             root_model: Callable that returns a :class:`RootModel` that will be \
@@ -332,10 +365,15 @@ class StepSwarm(Swarm):
                                 kernel it will display the evolution of the swarm \
                                 in a widget.
             force_logging: If ``True``, disable al ``ipython`` related behaviour.
+            step_after_improvement: Only step the root walker if the best state \
+                                    found by the internal swarm is better than the root walker.
             *args: Passed to ``swarm``.
             **kwargs: Passed to ``swarm``.
 
         """
+        model_params = model(env()).get_params_dict()
+        acts = model_params.get("actions")
+        actions_shape = None if acts is None else acts.get("size")
         self.internal_swarm = StoreInitAction(
             swarm(
                 max_epochs=step_epochs,
@@ -347,14 +385,20 @@ class StepSwarm(Swarm):
                 accumulate_rewards=accumulate_rewards,
                 minimize=minimize,
                 use_notebook_widget=False,
+                model=model,
+                env=env,
+                actions_shape=actions_shape,
                 *args,
                 **kwargs
             )
         )
         self.internal_swarm.reset()
-        self.root_model: RootModel = root_model()
+        self.root_model: RootModel = root_model(
+            env=self.internal_swarm.env, model=self.internal_swarm.model
+        )
         if reward_limit is None:
             reward_limit = -numpy.inf if self.internal_swarm.walkers.minimize else numpy.inf
+        self.step_after_improvement = step_after_improvement
         self.accumulate_rewards = accumulate_rewards
         self._max_epochs = int(max_epochs)
         self.reward_limit = reward_limit
@@ -532,13 +576,17 @@ class StepSwarm(Swarm):
 
     def step_root_state(self):
         """Make the state transition of the root state."""
-        model_states = self.root_model.predict(
-            root_env_states=self.root_env_states, walkers=self.walkers
-        )
-        parent_id = copy.copy(self.best_id)
-        new_env_states = self.env.step(model_states=model_states, env_states=self.root_env_states)
-        self.update_states(new_env_states, model_states)
-        self.update_tree(states_ids=[parent_id])
+        best_ix = self.walkers.get_best_index() if self.step_after_improvement else None
+        if self._should_step_root_state(best_ix):
+            model_states = self.root_model.predict(
+                root_env_states=self.root_env_states, walkers=self.walkers
+            )
+            parent_id = copy.copy(self.best_id)
+            new_env_states = self.env.step(
+                model_states=model_states, env_states=self.root_env_states
+            )
+            self.update_states(new_env_states, model_states)
+            self.update_tree(states_ids=[parent_id])
 
     def update_states(self, env_states, model_states):
         """Update the data of the root state."""
@@ -564,6 +612,16 @@ class StepSwarm(Swarm):
             time=copy.deepcopy(times[0]),
         )
 
+    def _should_step_root_state(self, best_ix=None):
+        if not self.step_after_improvement:
+            return True
+        if not self.walkers.get("in_bounds").any():
+            return False
+        if self.minimize:
+            return self.walkers.get("cum_rewards")[best_ix] < self.best_reward
+        else:
+            return self.walkers.get("cum_rewards")[best_ix] > self.best_reward
+
 
 class StepToBest(StepSwarm):
     """
@@ -582,19 +640,12 @@ class StepToBest(StepSwarm):
 
     def step_root_state(self):
         """Step the root state to the best walker found during the run of the internal Swarm."""
-        ib = self.walkers.states.in_bounds
-        in_bounds_rewards = self.walkers.get("cum_rewards")[ib]
-        if len(in_bounds_rewards) == 0:
-            best_ix = 0
-        else:
-            best_ix_filtered = int(
-                in_bounds_rewards.argmin() if self.walkers.minimize else in_bounds_rewards.argmax()
-            )
-            best_ix = int(numpy.arange(self.walkers.n)[ib][best_ix_filtered])
-        self.root_env_states = self.walkers.env_states[best_ix]
-        self.root_walkers_states = self.walkers.states[best_ix]
-        self.update_states()
-        self.update_tree([self.best_id])
+        best_ix = self.walkers.get_best_index()
+        if self._should_step_root_state(best_ix):
+            self.root_env_states = self.walkers.env_states[best_ix]
+            self.root_walkers_states = self.walkers.states[best_ix]
+            self.update_states()
+            self.update_tree([self.best_id])
 
     def update_states(self):
         """Update the data of the root walker after an internal Swarm iteration has finished."""
