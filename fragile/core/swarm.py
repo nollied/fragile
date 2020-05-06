@@ -48,9 +48,9 @@ class Swarm(BaseSwarm):
 
         Args:
             n_walkers: Number of walkers of the swarm.
-            env: A callable that returns an instance of an Environment.
-            model: A callable that returns an instance of a Model.
-            walkers: A callable that returns an instance of BaseWalkers.
+            env: A callable that returns an instance of an :class:`Environment`.
+            model: A callable that returns an instance of a :class:`Model`.
+            walkers: A callable that returns an instance of :class:`BaseWalkers`.
             reward_scale: Virtual reward exponent for the reward score.
             distance_scale: Virtual reward exponent for the distance score.
             tree: class:`StatesTree` that keeps track of the visited states.

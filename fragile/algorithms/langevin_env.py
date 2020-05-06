@@ -1,8 +1,9 @@
-from typing import Callable, Dict, Tuple, Union
+from typing import Callable, Dict
+
 import numpy
 
 from fragile.core.bounds import Bounds
-from fragile.core.states import StatesEnv, StatesModel
+from fragile.core.states import StatesEnv
 from fragile.optimize.env import Function
 
 
@@ -38,6 +39,9 @@ class Langevin(Function):
                     indicates that the corresponding point is **outside**  the \
                     ``custom_domain_check``.
             brownian: Ignore the force term when updating the velocities.
+            dt: Step size of the integration.
+            temperature: Temperature parameter of the Langevin dynamics.
+            derivative: Derivative of function.
 
         """
         super(Langevin, self).__init__(

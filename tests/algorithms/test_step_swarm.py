@@ -50,7 +50,7 @@ def create_step_to_best():
     swarm = StepToBest(
         model=lambda x: DiscreteUniform(env=x),
         env=lambda: ParallelEnv(lambda: DiscreteEnv(ClassicControl("CartPole-v0"))),
-        reward_limit=101,
+        reward_limit=51,
         n_walkers=100,
         max_epochs=200,
         step_epochs=50,
@@ -87,7 +87,7 @@ swarm_names = list(swarm_dict.keys())
 test_scores = {
     "majority": 10,
     "follow_best": 100,
-    "step_to_best": 100,
+    "step_to_best": 50,
     "follow_best_after_impr": 100,
     "step_to_best_after_impr": 100,
 }
