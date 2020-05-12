@@ -438,7 +438,7 @@ class StatesEnv(States):
     def get_params_dict(self) -> StateDict:
         """Return a dictionary describing the data stored in the :class:`StatesEnv`."""
         params = {
-            "states": {"dtype": numpy.int64},
+            "states": {"dtype": numpy.float64},
             "observs": {"dtype": numpy.float32},
             "rewards": {"dtype": numpy.float32},
             "oobs": {"dtype": numpy.bool_},

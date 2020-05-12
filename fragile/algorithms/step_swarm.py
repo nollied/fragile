@@ -318,6 +318,9 @@ class StepSwarm(Swarm):
         use_notebook_widget: bool = True,
         force_logging: bool = False,
         step_after_improvement: bool = False,
+        internal_tree: Callable[[], BaseTree] = None,
+        internal_notebook_widget: bool = False,
+        internal_show_pbar: bool = False,
         *args,
         **kwargs
     ):
@@ -346,58 +349,63 @@ class StepSwarm(Swarm):
                        the algorithm run.
             walkers: A callable that returns an instance of :class:`StepWalkers`.
             swarm: A callable that returns an instance of :class:`Swarm` and \
-                  takes as input all the corresponding parameters provided. It \
-                  will be wrapped with a :class:`StoreInitAction` before \
-                  assigning it to the ``internal_swarm`` attribute.
+                   takes as input all the corresponding parameters provided. It \
+                   will be wrapped with a :class:`StoreInitAction` before \
+                   assigning it to the ``internal_swarm`` attribute.
             reward_limit: The algorithm run will stop after reaching this \
                           reward value. If you are running a minimization process \
                           it will be considered the minimum reward possible, and \
                           if you are maximizing a reward it will be the maximum \
                           value.
             max_epochs: Maximum number of steps that the root walker is allowed \
-                       to take.
+                        to take.
             accumulate_rewards: If ``True`` the rewards obtained after transitioning \
                                 to a new state will accumulate. If ``False`` only the last \
                                 reward will be taken into account.
             minimize: If ``True`` the algorithm will perform a minimization \
                       process. If ``False`` it will be a maximization process.
             use_notebook_widget: If ``True`` and the class is running in an IPython \
-                                kernel it will display the evolution of the swarm \
-                                in a widget.
+                                 kernel it will display the evolution of the swarm \
+                                 in a widget.
             force_logging: If ``True``, disable al ``ipython`` related behaviour.
             step_after_improvement: Only step the root walker if the best state \
                                     found by the internal swarm is better than the root walker.
+            internal_notebook_widget: If ``True`` and the class is running in an IPython \
+                                 kernel it will display the evolution of the internal swarm \
+                                 in a widget.
+            internal_show_pbar: show_pbar: If ``True`` A progress bar will display \
+                                the progress of the internal swarm algorithm run.
+            internal_tree: tree: class:`StatesTree` that keeps track of the visited \
+                                 states by the internal swarm.
             *args: Passed to ``swarm``.
             **kwargs: Passed to ``swarm``.
 
         """
-        model_params = model(env()).get_params_dict()
-        acts = model_params.get("actions")
-        actions_shape = None if acts is None else acts.get("size")
-        self.internal_swarm = StoreInitAction(
-            swarm(
-                max_epochs=step_epochs,
-                show_pbar=False,
-                report_interval=numpy.inf,
-                n_walkers=n_walkers,
-                tree=None,
-                walkers=walkers,
-                accumulate_rewards=accumulate_rewards,
-                minimize=minimize,
-                use_notebook_widget=False,
-                model=model,
-                env=env,
-                actions_shape=actions_shape,
-                *args,
-                **kwargs
-            )
+        self._notebook_container = None
+        self._use_notebook_widget = use_notebook_widget
+        self._ipython_mode = running_in_ipython() and not force_logging
+        self.setup_notebook_container()
+        self.internal_swarm = None
+        self._init_internal_swarm(
+            swarm,
+            model,
+            env,
+            walkers,
+            step_epochs,
+            n_walkers,
+            accumulate_rewards,
+            minimize,
+            internal_notebook_widget,
+            internal_show_pbar,
+            internal_tree,
+            *args,
+            **kwargs
         )
-        self.internal_swarm.reset()
         self.root_model: RootModel = root_model(
             env=self.internal_swarm.env, model=self.internal_swarm.model
         )
         if reward_limit is None:
-            reward_limit = -numpy.inf if self.internal_swarm.walkers.minimize else numpy.inf
+            reward_limit = numpy.NINF if self.internal_swarm.walkers.minimize else numpy.inf
         self.step_after_improvement = step_after_improvement
         self.accumulate_rewards = accumulate_rewards
         self._max_epochs = int(max_epochs)
@@ -420,10 +428,45 @@ class StepSwarm(Swarm):
             state=self.root_env_states.states[0],
             time=0,
         )
-        self._notebook_container = None
-        self._use_notebook_widget = use_notebook_widget
-        self._ipython_mode = running_in_ipython() and not force_logging
-        self.setup_notebook_container()
+
+    def _init_internal_swarm(
+        self,
+        swarm,
+        model,
+        env,
+        walkers,
+        step_epochs,
+        n_walkers,
+        accumulate_rewards,
+        minimize,
+        use_notebook_widget: bool = False,
+        show_pbar: bool = False,
+        tree=None,
+        *args,
+        **kwargs,
+    ):
+        model_params = model(env()).get_params_dict()
+        acts = model_params.get("actions")
+        actions_shape = None if acts is None else acts.get("size")
+        self.internal_swarm = StoreInitAction(
+            swarm(
+                max_epochs=step_epochs,
+                show_pbar=show_pbar,
+                report_interval=numpy.inf,
+                n_walkers=n_walkers,
+                tree=tree,
+                walkers=walkers,
+                accumulate_rewards=accumulate_rewards,
+                minimize=minimize,
+                use_notebook_widget=use_notebook_widget,
+                model=model,
+                env=env,
+                actions_shape=actions_shape,
+                *args,
+                **kwargs
+            )
+        )
+        self.internal_swarm.reset()
 
     def __repr__(self):
         with numpy.printoptions(linewidth=100, threshold=200, edgeitems=9):
@@ -597,8 +640,8 @@ class StepSwarm(Swarm):
             cum_rewards = cum_rewards + self.root_env_states.rewards
         else:
             cum_rewards = self.root_env_states.rewards
-
-        times = self.root_walkers_states.times + self.root_walker.times
+        dt = self.root_model_states.dt if hasattr(self.root_model_states, "dt") else 1.0
+        times = dt + self.root_walker.times
         self.root_walkers_states.update(
             cum_rewards=cum_rewards,
             id_walkers=numpy.array([hash_numpy(self.root_env_states.states[0])]),

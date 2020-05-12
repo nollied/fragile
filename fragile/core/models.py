@@ -183,7 +183,7 @@ class _DtModel(Model):
             dict containing the parameters of both the :class:`Model` and its :class:`Critic`.
 
         """
-        dt = {"dt": {"dtype": numpy.int_}, "critic_score": {"dtype": numpy.int_}}
+        dt = {"dt": {"dtype": numpy.float}, "critic_score": {"dtype": numpy.int_}}
         all_params = self.add_critic_params(params=dt, override_params=override_params)
         return all_params
 
@@ -211,7 +211,7 @@ class _DtModel(Model):
             )
 
             dt = (
-                critic_states.critic_score.astype(int)
+                critic_states.critic_score
                 if isinstance(critic_states.critic_score, numpy.ndarray)
                 else critic_states.critic_score
             )
@@ -299,7 +299,8 @@ class BinarySwap(DiscreteModel):
 
         Args:
             n_swaps: Number of binary dimensions that will be swapped every time \
-             `sample` is called. If `n_swaps` is None it will be the same as n_actions.
+                     `sample` is called. If `n_swaps` is None it will be the same \
+                     as n_actions.
             n_actions: Number of different discrete outcomes that the model can provide.
             env: :class:`DiscreteEnvironment` that will be used to extract the \
             dimension of the target vector.
