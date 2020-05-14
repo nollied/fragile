@@ -3,14 +3,10 @@ from typing import Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
 import numpy
 
-from fragile.core.utils import (
-    float_type,
-    hash_numpy,
-    hash_type,
-    Scalar,
-    similiar_chunks_indexes,
-    StateDict,
-)
+from fragile.backend import functions as F
+from fragile.backend.data_types import dtype, tensor, typing
+
+from fragile.core.utils import similiar_chunks_indexes
 
 
 class States:
@@ -47,7 +43,7 @@ class States:
 
     """
 
-    def __init__(self, batch_size: int, state_dict: Optional[StateDict] = None, **kwargs):
+    def __init__(self, batch_size: int, state_dict: Optional[typing.StateDict] = None, **kwargs):
         """
         Initialize a :class:`States`.
 
@@ -69,8 +65,8 @@ class States:
         return self._batch_size
 
     def __getitem__(
-        self, item: Union[str, int, numpy.int64]
-    ) -> Union[numpy.ndarray, List[numpy.ndarray], "States"]:
+        self, item: Union[str, typing.int]
+    ) -> Union[typing.Tensor, List[typing.Tensor], "States"]:
         """
         Query an attribute of the class as if it was a dictionary.
 
@@ -86,7 +82,7 @@ class States:
                 return getattr(self, item)
             except AttributeError:
                 raise TypeError("Tried to get a non existing attribute with key {}".format(item))
-        elif isinstance(item, (int, numpy.int64)):
+        elif dtype.is_int(item):
             return self._ix(item)
         else:
             raise TypeError(
@@ -97,13 +93,10 @@ class States:
 
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
-        data = {
-            k: numpy.array([v[index]]) if isinstance(v, numpy.ndarray) else v
-            for k, v in self.items()
-        }
+        data = {k: tensor([v[index]]) if dtype.is_tensor(v) else v for k, v in self.items()}
         return self.__class__(batch_size=1, **data)
 
-    def __setitem__(self, key, value: Union[Tuple, List, numpy.ndarray]):
+    def __setitem__(self, key, value: Union[Tuple, List, typing.Tensor]):
         """
         Allow the class to set its attributes as if it was a dict.
 
@@ -129,23 +122,19 @@ class States:
 
     def __hash__(self) -> int:
         _hash = hash(
-            tuple(
-                [hash_numpy(x) if isinstance(x, numpy.ndarray) else hash(x) for x in self.vals()]
-            )
+            tuple([F.hash_tensor(x) if dtype.is_tensor(x) else hash(x) for x in self.vals()])
         )
         return _hash
 
     def group_hash(self, name: str) -> int:
         """Return a unique id for a given attribute."""
         val = getattr(self, name)
-        return hash_numpy(val) if isinstance(val, numpy.ndarray) else hash(val)
+        return F.hash_tensor(val) if dtype.is_tensor(val) else hash(val)
 
     def hash_values(self, name: str) -> List[int]:
         """Return a unique id for each walker attribute."""
         values = getattr(self, name)
-        hashes = [
-            hash_numpy(val) if isinstance(val, numpy.ndarray) else hash(val) for val in values
-        ]
+        hashes = [F.hash_tensor(val) if dtype.is_tensor(val) else hash(val) for val in values]
         return hashes
 
     @staticmethod
@@ -165,26 +154,24 @@ class States:
 
         def merge_one_name(states_list, name):
             vals = []
-            is_scalar_vector = True
             for state in states_list:
                 data = state[name]
                 # Attributes that are not numpy arrays are not stacked.
-                if not isinstance(data, numpy.ndarray):
+                if not dtype.is_tensor(data):
                     return data
                 state_len = len(state)
                 if len(data.shape) == 0 and state_len == 1:
-                    # Name is scalar vector. Data is scalar value. Transform to array first
-                    value = numpy.array([data]).flatten()
+                    # Name is typing.Scalar vector. Data is typing.Scalar value. Transform to array first
+                    value = tensor([data]).flatten()
                 elif len(data.shape) == 1 and state_len == 1:
                     if data.shape[0] == 1:
-                        # Name is scalar vector. Data already transformed to an array
+                        # Name is typing.Scalar vector. Data already transformed to an array
                         value = data
                     else:
                         # Name is a matrix of vectors. Data needs an additional dimension
-                        is_scalar_vector = False
-                        value = numpy.array([data])
+                        value = tensor([data])
                 elif len(data.shape) == 1 and state_len > 1:
-                    # Name is a scalar vector. Data already has is a one dimensional array
+                    # Name is a typing.Scalar vector. Data already has is a one dimensional array
                     value = data
                 elif (
                     len(data.shape) > 1
@@ -193,7 +180,6 @@ class States:
                     and len(state) == 1
                 ):
                     # Name is a matrix of vectors. Data has the correct shape
-                    is_scalar_vector = False
                     value = data
                 else:
                     raise ValueError(
@@ -201,10 +187,7 @@ class States:
                         % (name, data.shape)
                     )
                 vals.append(value)
-            if is_scalar_vector:
-                return numpy.concatenate(vals)
-            else:
-                return numpy.vstack(vals)
+            return F.concatenate(vals)
 
         # Assumes all states have the same names.
         data = {name: merge_one_name(states, name) for name in states[0]._names}
@@ -271,7 +254,7 @@ class States:
         if self.n < 1:
             return self.vals()
         for i in range(self.n):
-            values = (v[i] if isinstance(v, numpy.ndarray) else v for v in self.vals())
+            values = (v[i] if dtype.is_tensor(v) else v for v in self.vals())
             yield tuple(self._names), tuple(values)
 
     def split_states(self, n_chunks: int) -> Generator["States", None, None]:
@@ -283,17 +266,14 @@ class States:
         def get_chunck_size(state, start, end):
             for name in state._names:
                 attr = state[name]
-                if isinstance(attr, numpy.ndarray):
+                if dtype.is_tensor(attr):
                     return len(attr[start:end])
             return int(numpy.ceil(self.n / n_chunks))
 
         for start, end in similiar_chunks_indexes(self.n, n_chunks):
             chunk_size = get_chunck_size(self, start, end)
 
-            data = {
-                k: val[start:end] if isinstance(val, numpy.ndarray) else val
-                for k, val in self.items()
-            }
+            data = {k: val[start:end] if dtype.is_tensor(val) else val for k, val in self.items()}
             new_state = self.__class__(batch_size=chunk_size, **data)
             yield new_state
 
@@ -313,7 +293,11 @@ class States:
         def update_or_set_attributes(attrs: Union[dict, States]):
             for name, val in attrs.items():
                 try:
-                    getattr(self, name)[:] = copy.deepcopy(val)
+                    data = getattr(self, name)
+                    if len(data.shape) == 0:
+                        data = tensor.copy(val)
+                    else:
+                        data[:] = tensor.copy(val)
                 except (AttributeError, TypeError, KeyError, ValueError):
                     setattr(self, name, copy.deepcopy(val))
 
@@ -324,8 +308,8 @@ class States:
 
     def clone(
         self,
-        will_clone: numpy.ndarray,
-        compas_ix: numpy.ndarray,
+        will_clone: typing.Tensor,
+        compas_ix: typing.Tensor,
         ignore: Optional[Set[str]] = None,
     ):
         """
@@ -342,15 +326,15 @@ class States:
         """
         ignore = set() if ignore is None else ignore
         for name in self.keys():
-            if isinstance(self[name], numpy.ndarray) and name not in ignore:
+            if dtype.is_tensor(self[name]) and name not in ignore:
                 self[name][will_clone] = self[name][compas_ix][will_clone]
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return a dictionary describing the data stored in the :class:`States`."""
         return {
             k: {"shape": v.shape, "dtype": v.dtype}
             for k, v in self.__dict__.items()
-            if isinstance(v, numpy.ndarray)
+            if dtype.is_tensor(v)
         }
 
     def copy(self) -> "States":
@@ -359,7 +343,7 @@ class States:
         return States(batch_size=self.n, **param_dict)
 
     @staticmethod
-    def params_to_arrays(param_dict: StateDict, n_walkers: int) -> Dict[str, numpy.ndarray]:
+    def params_to_arrays(param_dict: typing.StateDict, n_walkers: int) -> Dict[str, typing.Tensor]:
         """
         Create a dictionary containing the arrays specified by param_dict.
 
@@ -388,7 +372,13 @@ class States:
                 del val["size"]
             if "shape" in val:
                 del val["shape"]
-            tensor_dict[key] = numpy.zeros(shape=sizes, **val)
+
+            try:
+                tensor_dict[key] = tensor.zeros(sizes, **val)
+            except Exception as e:
+                print(val, sizes)
+                raise e
+                #tensor_dict[key] = numpy.zeros(sizes, **val)
         return tensor_dict
 
 
@@ -415,7 +405,7 @@ class StatesEnv(States):
 
     """
 
-    def __init__(self, batch_size: int, state_dict: Optional[StateDict] = None, **kwargs):
+    def __init__(self, batch_size: int, state_dict: Optional[typing.StateDict] = None, **kwargs):
         """
         Initialise a :class:`StatesEnv`.
 
@@ -435,14 +425,14 @@ class StatesEnv(States):
             updated_dict.update(state_dict)
         super(StatesEnv, self).__init__(state_dict=updated_dict, batch_size=batch_size, **kwargs)
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return a dictionary describing the data stored in the :class:`StatesEnv`."""
         params = {
-            "states": {"dtype": numpy.float64},
-            "observs": {"dtype": numpy.float32},
-            "rewards": {"dtype": numpy.float32},
-            "oobs": {"dtype": numpy.bool_},
-            "terminals": {"dtype": numpy.bool_},
+            "states": {"dtype": dtype.float64},
+            "observs": {"dtype": dtype.float32},
+            "rewards": {"dtype": dtype.float32},
+            "oobs": {"dtype": dtype.bool},
+            "terminals": {"dtype": dtype.bool},
         }
         state_dict = super(StatesEnv, self).get_params_dict()
         params.update(state_dict)
@@ -458,7 +448,7 @@ class StatesModel(States):
 
     """
 
-    def __init__(self, batch_size: int, state_dict: Optional[StateDict] = None, **kwargs):
+    def __init__(self, batch_size: int, state_dict: Optional[typing.StateDict] = None, **kwargs):
         """
         Initialise a :class:`StatesModel`.
 
@@ -474,10 +464,10 @@ class StatesModel(States):
             updated_dict.update(state_dict)
         super(StatesModel, self).__init__(state_dict=updated_dict, batch_size=batch_size, **kwargs)
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return the parameter dictionary with tre attributes common to all Models."""
         params = {
-            "actions": {"dtype": numpy.float32},
+            "actions": {"dtype": dtype.float32},
         }
         state_dict = super(StatesModel, self).get_params_dict()
         params.update(state_dict)
@@ -518,7 +508,7 @@ class StatesWalkers(States):
 
     """
 
-    def __init__(self, batch_size: int, state_dict: Optional[StateDict] = None, **kwargs):
+    def __init__(self, batch_size: int, state_dict: Optional[typing.StateDict] = None, **kwargs):
         """
         Initialize a :class:`StatesWalkers`.
 
@@ -540,7 +530,7 @@ class StatesWalkers(States):
         self.best_id = None
         self.best_obs = None
         self.best_state = None
-        self.best_reward = -numpy.inf
+        self.best_reward = numpy.NINF
         self.best_time = 0
         self.times = None
         updated_dict = self.get_params_dict()
@@ -550,27 +540,27 @@ class StatesWalkers(States):
             state_dict=updated_dict, batch_size=batch_size, **kwargs
         )
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return a dictionary containing the param_dict to build an instance \
         of States that can handle all the data generated by the :class:`Walkers`.
         """
         params = {
-            "id_walkers": {"dtype": hash_type},
-            "compas_clone": {"dtype": numpy.int64},
-            "times": {"dtype": numpy.int64},
-            "processed_rewards": {"dtype": float_type},
-            "virtual_rewards": {"dtype": float_type},
-            "cum_rewards": {"dtype": float_type},
-            "distances": {"dtype": float_type},
-            "clone_probs": {"dtype": float_type},
-            "will_clone": {"dtype": numpy.bool_},
-            "in_bounds": {"dtype": numpy.bool_},
+            "id_walkers": {"dtype": dtype.hash_type},
+            "compas_clone": {"dtype": dtype.int64},
+            "times": {"dtype": dtype.int64},
+            "processed_rewards": {"dtype": dtype.float},
+            "virtual_rewards": {"dtype": dtype.float},
+            "cum_rewards": {"dtype": dtype.float},
+            "distances": {"dtype": dtype.float},
+            "clone_probs": {"dtype": dtype.float},
+            "will_clone": {"dtype": dtype.bool},
+            "in_bounds": {"dtype": dtype.bool},
         }
         state_dict = super(StatesWalkers, self).get_params_dict()
         params.update(state_dict)
         return params
 
-    def clone(self, **kwargs) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    def clone(self, **kwargs) -> Tuple[typing.Tensor, typing.Tensor]:
         """Perform the clone only on cum_rewards and id_walkers and reset the other arrays."""
         clone, compas = self.will_clone, self.compas_clone
         self.cum_rewards[clone] = copy.deepcopy(self.cum_rewards[compas][clone])
@@ -586,23 +576,23 @@ class StatesWalkers(States):
         for attr in other_attrs:
             setattr(self, attr, None)
         self.update(
-            id_walkers=numpy.zeros(self.n, dtype=hash_type),
-            compas_dist=numpy.arange(self.n),
-            compas_clone=numpy.arange(self.n),
-            times=numpy.zeros(self.n, dtype=numpy.int64),
-            processed_rewards=numpy.zeros(self.n, dtype=float_type),
-            cum_rewards=numpy.zeros(self.n, dtype=float_type),
-            virtual_rewards=numpy.ones(self.n, dtype=float_type),
-            distances=numpy.zeros(self.n, dtype=float_type),
-            clone_probs=numpy.zeros(self.n, dtype=float_type),
-            will_clone=numpy.zeros(self.n, dtype=numpy.bool_),
-            in_bounds=numpy.ones(self.n, dtype=numpy.bool_),
+            id_walkers=tensor.zeros(self.n, dtype=dtype.hash_type),
+            compas_dist=tensor.arange(self.n),
+            compas_clone=tensor.arange(self.n),
+            times=tensor.zeros(self.n, dtype=dtype.int64),
+            processed_rewards=tensor.zeros(self.n, dtype=dtype.float),
+            cum_rewards=tensor.zeros(self.n, dtype=dtype.float),
+            virtual_rewards=tensor.ones(self.n, dtype=dtype.float),
+            distances=tensor.zeros(self.n, dtype=dtype.float),
+            clone_probs=tensor.zeros(self.n, dtype=dtype.float),
+            will_clone=tensor.zeros(self.n, dtype=dtype.bool),
+            in_bounds=tensor.ones(self.n, dtype=dtype.bool),
         )
 
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
         data = {
-            k: numpy.array([v[index]]) if isinstance(v, numpy.ndarray) and "best" not in k else v
+            k: tensor([v[index]]) if dtype.is_tensor(v) and "best" not in k else v
             for k, v in self.items()
         }
         return self.__class__(batch_size=1, **data)
@@ -619,12 +609,12 @@ class OneWalker(States):
 
     def __init__(
         self,
-        state: numpy.ndarray,
-        observ: numpy.ndarray,
-        reward: Scalar,
+        state: typing.Tensor,
+        observ: typing.Tensor,
+        reward: typing.Scalar,
         id_walker=None,
         time=0,
-        state_dict: StateDict = None,
+        state_dict: typing.StateDict = None,
         **kwargs
     ):
         """
@@ -633,10 +623,10 @@ class OneWalker(States):
         Args:
             state: Non batched numpy array defining the state of the walker.
             observ: Non batched numpy array defining the observation of the walker.
-            reward: Scalar value representing the reward of the walker.
+            reward: typing.Scalar value representing the reward of the walker.
             id_walker: Hash of the provided State. If None it will be calculated when the
                        the :class:`OneWalker` is initialized.
-            state_dict: External :class:`StateDict` that overrides the default values.
+            state_dict: External :class:`typing.StateDict` that overrides the default values.
             time: Time step of the current walker. Measures the length of the path followed \
                   by the walker.
             **kwargs: Additional data needed to define the walker. Its structure \
@@ -653,7 +643,7 @@ class OneWalker(States):
         self._observs_dtype = observ.dtype
         self._states_size = state.shape
         self._states_dtype = state.dtype
-        self._times_dtype = numpy.int64
+        self._times_dtype = dtype.int64
         self._rewards_dtype = type(reward)
         # Accept external definition of param_dict values
         walkers_dict = self.get_params_dict()
@@ -677,11 +667,13 @@ class OneWalker(States):
         self.rewards[:] = copy.deepcopy(reward)
         self.times[:] = copy.deepcopy(time)
         self.id_walkers[:] = (
-            copy.deepcopy(id_walker) if id_walker is not None else hash_numpy(state)
+            copy.deepcopy(id_walker) if id_walker is not None else F.hash_tensor(state)
         )
         self.update(**kwargs)
 
     def __repr__(self):
+        import numpy
+
         with numpy.printoptions(linewidth=100, threshold=200, edgeitems=9):
             string = (
                 "reward: %s\n"
@@ -699,12 +691,12 @@ class OneWalker(States):
             )
             return string
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return a dictionary containing the param_dict to build an instance \
         of States that can handle all the data generated by the :class:`Walkers`.
         """
         params = {
-            "id_walkers": {"dtype": hash_type},
+            "id_walkers": {"dtype": dtype.hash_type},
             "rewards": {"dtype": self._rewards_dtype},
             "observs": {"dtype": self._observs_dtype, "size": self._observs_size},
             "states": {"dtype": self._states_dtype, "size": self._states_size},

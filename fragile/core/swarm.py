@@ -5,6 +5,7 @@ from typing import Any, Callable, Iterable, List
 
 import numpy
 
+from fragile.backend import typing
 from fragile.core.base_classes import (
     BaseCritic,
     BaseEnvironment,
@@ -13,7 +14,7 @@ from fragile.core.base_classes import (
 )
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.tree import HistoryTree
-from fragile.core.utils import running_in_ipython, Scalar
+from fragile.core.utils import running_in_ipython
 from fragile.core.walkers import Walkers
 
 
@@ -115,17 +116,17 @@ class Swarm(BaseSwarm):
         return self._walkers
 
     @property
-    def best_time(self) -> numpy.ndarray:
+    def best_time(self) -> typing.Tensor:
         """Return the state of the best walker found in the current algorithm run."""
         return self.walkers.best_time
 
     @property
-    def best_state(self) -> numpy.ndarray:
+    def best_state(self) -> typing.Tensor:
         """Return the state of the best walker found in the current algorithm run."""
         return self.walkers.best_state
 
     @property
-    def best_reward(self) -> Scalar:
+    def best_reward(self) -> typing.Scalar:
         """Return the reward of the best walker found in the current algorithm run."""
         return self.walkers.best_reward
 
@@ -138,7 +139,7 @@ class Swarm(BaseSwarm):
         return self.walkers.best_id
 
     @property
-    def best_obs(self) -> numpy.ndarray:
+    def best_obs(self) -> typing.Tensor:
         """
         Return the observation corresponding to the best walker found in the \
         current algorithm run.

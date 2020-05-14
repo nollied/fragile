@@ -2,8 +2,9 @@ import copy
 from typing import Any, Dict, Generator, List, Set, Tuple, Union
 
 import networkx as nx
-import numpy
+#import numpy
 
+from fragile.backend import tensor, typing
 from fragile.core.base_classes import BaseTree
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 from fragile.core.utils import random_state
@@ -489,14 +490,14 @@ class HistoryTree(NetworkxTree):
 
         return tuple(get_item(data, name) for name in names)
 
-    def _process_batch(self, batch_data: List[tuple]) -> Tuple[numpy.ndarray, ...]:
+    def _process_batch(self, batch_data: List[tuple]) -> Tuple[typing.Tensor, ...]:
         """
         Preprocess the list of tuples representing a batched group of elements \
         and return a tuple of arrays representing the batched values for every \
         data attribute.
         """
         unpacked = zip(*batch_data)
-        return tuple(numpy.asarray(val) for val in unpacked)
+        return tuple(tensor.as_tensor(val) for val in unpacked)
 
     def _generate_batches(
         self, generator: NodeDataGenerator, names: NamesData, batch_size: int = None,

@@ -1,17 +1,11 @@
 from typing import Any, Callable, Dict, Generator, Tuple, Union
 
 import numpy
-import xxhash
 
 
 RANDOM_SEED = 160290
 random_state = numpy.random.RandomState(seed=RANDOM_SEED)
 
-hash_type = "<U64"
-float_type = numpy.float32
-Scalar = Union[int, numpy.int, float, numpy.float]
-StateDict = Dict[str, Dict[str, Any]]
-DistanceFunction = Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray]
 
 NUMPY_IGNORE_WARNINGS_PARAMS = {
     "divide": "ignore",
@@ -69,11 +63,6 @@ def remove_notebook_margin(output_width_pct: int = 80):
         "</style>"
     )
     return HTML(html)
-
-
-def hash_numpy(x: numpy.ndarray) -> int:
-    """Return a value that uniquely identifies a numpy array."""
-    return xxhash.xxh64_hexdigest(x.tobytes())
 
 
 def resize_frame(

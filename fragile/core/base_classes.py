@@ -1,9 +1,8 @@
 from typing import Callable, Dict, List, Tuple, Union
 
-import numpy
-
+from fragile.backend import dtype, typing
 from fragile.core.states import OneWalker, States, StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import RANDOM_SEED, random_state, StateDict
+from fragile.core.utils import RANDOM_SEED, random_state
 
 
 class StatesOwner:
@@ -21,7 +20,7 @@ class StatesOwner:
         cls.random_state.seed(seed)
 
     @classmethod
-    def get_params_dict(cls) -> StateDict:
+    def get_params_dict(cls) -> typing.StateDict:
         """
         Return an state_dict to be used for instantiating an States class.
 
@@ -137,7 +136,7 @@ class BaseCritic(StatesOwner):
     random_state = random_state
 
     @classmethod
-    def get_params_dict(cls) -> StateDict:
+    def get_params_dict(cls) -> typing.StateDict:
         """
         Return an state_dict to be used for instantiating an States class.
 
@@ -154,7 +153,7 @@ class BaseCritic(StatesOwner):
         will be accessed using the name_1 attribute of the class.
         """
         state_dict = {
-            "critic_score": {"size": tuple([1]), "dtype": numpy.float32},
+            "critic_score": {"size": tuple([1]), "dtype": dtype.float32},
         }
         return state_dict
 
@@ -312,7 +311,7 @@ class BaseEnvironment(StatesOwner):
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Union[Dict[str, numpy.ndarray], Tuple[numpy.ndarray, ...]]:
+    ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
         """
         Extract the data from the :class:`StatesEnv` and the :class:`StatesModel` \
         and return the values that will be passed to ``make_transitions``.
@@ -331,7 +330,7 @@ class BaseEnvironment(StatesOwner):
         """
         raise NotImplementedError
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, numpy.ndarray]:
+    def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
         """
         Return the data corresponding to the new state of the environment after \
         using the input data to make the corresponding state transition.
@@ -354,7 +353,7 @@ class BaseEnvironment(StatesOwner):
         """
         raise NotImplementedError
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """
         Return an state_dict to be used for instantiating the states containing \
         the data describing the Environment.
@@ -414,7 +413,7 @@ class BaseModel(StatesOwner):
         """
         return self
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """
         Return an state_dict to be used for instantiating the states containing \
         the data describing the Model.
@@ -570,7 +569,7 @@ class BaseWalkers(StatesOwner):
         """Increment the current epoch counter."""
         self._epoch += 1
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return the params_dict of the internal StateOwners."""
         state_dict = {
             name: getattr(self, name).get_params_dict()
@@ -634,7 +633,7 @@ class BaseWalkers(StatesOwner):
         """Sample the clone probability distribution and clone the walkers accordingly."""
         raise NotImplementedError
 
-    def get_in_bounds_compas(self) -> numpy.ndarray:
+    def get_in_bounds_compas(self) -> typing.Tensor:
         """
         Return an array of indexes corresponding to an alive walker chosen \
         at random.

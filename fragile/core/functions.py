@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy
 
+from fragile.backend import dtype, tensor
 from fragile.core.utils import random_state
 
 
@@ -12,21 +13,23 @@ def l2_norm(x: numpy.ndarray, y: numpy.ndarray) -> numpy.ndarray:
 
 def relativize(x: numpy.ndarray) -> numpy.ndarray:
     """Normalize the data using a custom smoothing technique."""
+    orig = x
+    x = tensor.astype(x, dtype.float)
     std = x.std()
     if float(std) == 0:
-        return numpy.ones(len(x), dtype=type(std))
+        return tensor.ones(len(x), dtype=orig.dtype)
     standard = (x - x.mean()) / std
-    standard[standard > 0] = numpy.log(1.0 + standard[standard > 0]) + 1.0
-    standard[standard <= 0] = numpy.exp(standard[standard <= 0])
+    standard[standard > 0] = tensor.log(1.0 + standard[standard > 0]) + 1.0
+    standard[standard <= 0] = tensor.exp(standard[standard <= 0])
     return standard
 
 
 def get_alives_indexes(oobs: numpy.ndarray):
     """Get indexes representing random alive walkers given a vector of death conditions."""
-    if numpy.all(oobs):
-        return numpy.arange(len(oobs))
-    ix = numpy.logical_not(oobs).flatten()
-    return numpy.random.choice(numpy.arange(len(ix))[ix], size=len(ix), replace=ix.sum() < len(ix))
+    if tensor.all(oobs):
+        return tensor.arange(len(oobs))
+    ix = tensor.logical_not(oobs).flatten()
+    return random_state.choice(tensor.arange(len(ix))[ix], size=len(ix), replace=ix.sum() < len(ix))
 
 
 def calculate_virtual_reward(
@@ -59,7 +62,7 @@ def calculate_clone(virtual_rewards: numpy.ndarray, oobs: numpy.ndarray, eps=1e-
     compas_ix = get_alives_indexes(oobs)
     vir_rew = virtual_rewards.flatten()
     clone_probs = (vir_rew[compas_ix] - vir_rew) / numpy.maximum(vir_rew, eps)
-    will_clone = clone_probs.flatten() > numpy.random.random(len(clone_probs))
+    will_clone = clone_probs.flatten() > random_state.random(len(clone_probs))
     return compas_ix, will_clone
 
 
@@ -128,7 +131,7 @@ def cross_clone(
     host_vr = host_virtual_rewards.flatten()
     ext_vr = ext_virtual_rewards.flatten()
     clone_probs = (ext_vr[compas_ix] - host_vr) / numpy.maximum(ext_vr, eps)
-    will_clone = clone_probs.flatten() > numpy.random.random(len(clone_probs))
+    will_clone = clone_probs.flatten() > random_state.random(len(clone_probs))
     if host_oobs is not None:
         will_clone[host_oobs] = True
     return compas_ix, will_clone

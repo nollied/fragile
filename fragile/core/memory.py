@@ -1,8 +1,9 @@
 import logging
 from typing import Iterable, List, Tuple, Union
 
-import numpy
+#import numpy
 
+from fragile.backend import dtype, functions as F, tensor, typing
 from fragile.core.swarm import Swarm
 
 
@@ -82,21 +83,21 @@ class ReplayMemory:
         # Concatenate the data to the current memory
         for name, val in zip(self.names, data):
             # Scalar vectors are transformed to columns
-            if isinstance(val, numpy.ndarray) and len(val.shape) == 1:
+            if dtype.is_tensor(val) and len(val.shape) == 1:
                 val = val.reshape(-1, 1)
             processed = (
-                val if getattr(self, name) is None else numpy.vstack([val, getattr(self, name)])
+                val if getattr(self, name) is None else F.concatenate([val, getattr(self, name)])
             )
             if len(processed) > self.max_size:
                 processed = processed[: self.max_size]
             setattr(self, name, processed)
         self._log.info("Memory now contains %s samples" % len(self))
 
-    def get_values(self) -> Tuple[numpy.ndarray, ...]:
+    def get_values(self) -> Tuple[typing.Tensor, ...]:
         """Return a tuple containing the memorized data for all the saved data attributes."""
         return tuple([getattr(self, val) for val in self.names])
 
-    def iterate_values(self) -> Iterable[Tuple[numpy.ndarray]]:
+    def iterate_values(self) -> Iterable[Tuple[typing.Tensor]]:
         """
         Return a generator that yields a tuple containing the data of each state \
         stored in the memory.
