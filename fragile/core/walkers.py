@@ -573,7 +573,7 @@ class Walkers(SimpleWalkers):
                 best_reward=best_reward,
                 best_state=best_state,
                 best_obs=best_obs,
-                best_id=tensor.copy(self.states.id_walkers[ix].detach(), requires_grad=False),
+                best_id=tensor.copy(self.states.id_walkers[ix], requires_grad=False),
                 best_time=tensor.copy(self.states.times[ix]),
             )
 
@@ -615,7 +615,7 @@ class Walkers(SimpleWalkers):
             best_reward=tensor.copy(self.env_states.rewards[best_ix]),
             best_obs=tensor.copy(self.env_states.observs[best_ix]),
             best_state=tensor.copy(self.env_states.states[best_ix]),
-            best_id=tensor.copy(self.states.id_walkers[best_ix].detach(), requires_grad=False),
+            best_id=tensor.copy(self.states.id_walkers[best_ix], requires_grad=False),
         )
         if self.critic is not None:
             critic_score = self.critic.reset(

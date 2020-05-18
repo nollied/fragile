@@ -1,7 +1,5 @@
 from typing import Dict, Union
 
-import torch
-
 from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core.base_classes import BaseEnvironment
 from fragile.core.states import StatesEnv, StatesModel

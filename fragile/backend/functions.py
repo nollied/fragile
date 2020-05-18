@@ -1,8 +1,7 @@
 import numpy
-import torch
 import xxhash
 
-from fragile.backend.backend import Backend
+from fragile.backend.backend import Backend, torch
 from fragile.backend.data_types import dtype, tensor
 
 

@@ -81,6 +81,7 @@ class ExportedWalkers(States):
         return self.rewards.min() if minimize else self.rewards.max()
 
     def copy(self):
+        """Return a copy of the current instance."""
         new_walkers = ExportedWalkers(batch_size=len(self))
         new_walkers.update(
             id_walkers=tensor(self.id_walkers),

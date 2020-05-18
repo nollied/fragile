@@ -1,8 +1,7 @@
 import numpy
-import torch
 
 
-from fragile.backend.backend import Backend
+from fragile.backend.backend import Backend, torch
 from fragile.backend.data_types import tensor, typing
 
 
@@ -21,7 +20,7 @@ class TorchRandomState(metaclass=MetaTorchRandomState):
 
     @staticmethod
     def permutation(x):
-        idx = torch.randperm(tensor.shape[0])
+        idx = torch.randperm(x.shape[0])
         sample = x[idx].to(Backend.get_device()).detach()
         return tensor.to_backend(sample)
 

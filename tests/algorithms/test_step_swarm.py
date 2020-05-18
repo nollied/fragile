@@ -16,9 +16,9 @@ def create_majority_step_swarm():
         model=lambda x: DiscreteUniform(env=x),
         env=get_cartpole_env,
         reward_limit=10,
-        n_walkers=10,  # 0,
-        max_epochs=2,  # 0,
-        step_epochs=2,  # 5,
+        n_walkers=100,
+        max_epochs=20,
+        step_epochs=25,
     )
     return swarm
 
@@ -29,9 +29,9 @@ def create_follow_best_step_swarm():
         model=lambda x: DiscreteUniform(env=x),
         env=get_cartpole_env,
         reward_limit=101,
-        n_walkers=10,  # 0,
-        max_epochs=2,  # 00,
-        step_epochs=2,  # 5,
+        n_walkers=100,
+        max_epochs=200,
+        step_epochs=10,
     )
     return swarm
 
@@ -55,9 +55,9 @@ def create_step_to_best():
         model=lambda x: DiscreteUniform(env=x),
         env=get_cartpole_env,
         reward_limit=51,
-        n_walkers=10,  # 0,
-        max_epochs=2,
-        step_epochs=2,
+        n_walkers=100,
+        max_epochs=160,
+        step_epochs=3,
     )
     return swarm
 
@@ -74,7 +74,7 @@ def create_step_to_best_after_impr():
         env=lambda: DiscreteEnv(env),
         reward_limit=-100,
         n_walkers=67,
-        max_epochs=2,
+        max_epochs=60,
         step_epochs=5,
         step_after_improvement=True,
     )
@@ -91,8 +91,8 @@ swarm_dict = {
 swarm_names = list(swarm_dict.keys())
 test_scores = {
     "majority": -10,
-    "follow_best": -100,
-    "step_to_best": -50,
+    "follow_best": -25,
+    "step_to_best": -25,
     "follow_best_after_impr": -100,
     "step_to_best_after_impr": -100,
 }

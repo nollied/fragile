@@ -5,7 +5,6 @@ import numpy
 
 from fragile.backend import functions as F
 from fragile.backend.data_types import dtype, tensor, typing
-
 from fragile.core.utils import similiar_chunks_indexes
 
 
@@ -161,7 +160,7 @@ class States:
                     return data
                 state_len = len(state)
                 if len(data.shape) == 0 and state_len == 1:
-                    # Name is typing.Scalar vector. Data is typing.Scalar value. Transform to array first
+                    # Name is scaler vector. Data is typing.Scalar value. Transform to array first
                     value = tensor([data]).flatten()
                 elif len(data.shape) == 1 and state_len == 1:
                     if data.shape[0] == 1:
@@ -667,7 +666,6 @@ class OneWalker(States):
                     )
         self.observs[:] = tensor.copy(observ)
         self.states[:] = tensor.copy(state)
-        # print("REWARDS SHAPE", self.rewards.shape, reward.shape, observ.shape, self.observs.shape)
         self.rewards[:] = tensor.copy(reward) if dtype.is_tensor(reward) else copy.deepcopy(reward)
         self.times[:] = tensor.copy(time) if dtype.is_tensor(time) else copy.deepcopy(time)
         self.id_walkers[:] = (

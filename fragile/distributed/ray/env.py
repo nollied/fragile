@@ -1,9 +1,7 @@
 import asyncio
 from typing import Callable, Dict, List, Tuple
 
-# import numpy
-
-from fragile.backend import typing, functions
+from fragile.backend import functions, typing
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks

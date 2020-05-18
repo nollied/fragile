@@ -1,9 +1,5 @@
 import warnings
 
-from fragile.backend import Backend
-
-Backend.set_backend("torch")
-
 warnings.filterwarnings(
     "ignore",
     message=(

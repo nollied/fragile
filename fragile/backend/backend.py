@@ -1,6 +1,23 @@
 from contextlib import contextmanager
 
-import torch
+try:
+    import torch
+except ImportError:
+
+    class cuda:
+        @staticmethod
+        def is_available():
+            return False
+
+    class torch_random:
+        @staticmethod
+        def manual_seed(*args, **kwargs):
+            return None
+
+    class torch:
+        cuda = cuda
+        Tensor = None
+        random = torch_random
 
 
 @contextmanager
@@ -19,7 +36,7 @@ class Backend:
     AVAILABLE_BACKENDS = ["numpy", "torch"]
     _backend = "numpy"
     _use_grad = False
-    _device = "gpu" if torch.cuda.is_available() else "cpu"
+    _device = "cuda" if torch.cuda.is_available() else "cpu"
 
     @classmethod
     def _checkvalid_backend(cls, name):

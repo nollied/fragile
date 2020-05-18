@@ -4,8 +4,6 @@ import sys
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
 
-# import numpy
-
 from fragile.backend import functions, typing
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
@@ -441,7 +439,11 @@ class RayEnv(EnvWrapper):
     """Step an :class:`Environment` in parallel using ``ray``."""
 
     def __init__(
-        self, env_callable: Callable[[dict], CoreEnv], n_workers: int, env_kwargs: dict = None,
+        self,
+        env_callable: Callable[[dict], CoreEnv],
+        n_workers: int,
+        env_kwargs: dict = None,
+        options: dict = None,
     ):
         """
         Initialize a :class:`RayEnv`.
@@ -451,14 +453,18 @@ class RayEnv(EnvWrapper):
             n_workers: Number of processes that will step the \
                        :class:`Environment` in parallel.
             env_kwargs: Passed to ``env_callable``.
+            options: passed to RemoteEnvironment.options().
 
         """
         from fragile.distributed.ray.env import Environment as RemoteEnvironment
 
+        options = options if options is not None else {}
         env_kwargs = {} if env_kwargs is None else env_kwargs
         self.n_workers = n_workers
         self.envs: List[RemoteEnvironment] = [
-            RemoteEnvironment.remote(env_callable=env_callable, env_kwargs=env_kwargs)
+            RemoteEnvironment.options(**options).remote(
+                env_callable=env_callable, env_kwargs=env_kwargs
+            )
             for _ in range(n_workers)
         ]
         super(RayEnv, self).__init__(env_callable(), name="_local_env")

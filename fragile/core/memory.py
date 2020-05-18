@@ -1,9 +1,7 @@
 import logging
 from typing import Iterable, List, Tuple, Union
 
-# import numpy
-
-from fragile.backend import dtype, functions as F, tensor, typing
+from fragile.backend import dtype, functions as F, typing
 from fragile.core.swarm import Swarm
 
 

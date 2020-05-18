@@ -25,12 +25,14 @@ class Bounds:
         Initialize a :class:`Bounds`.
 
         Args:
-            high: Higher value for the bound interval. If it is an typing.Scalar it will be applied to \
-                  all the coordinates of a target vector. If it is a vector, the bounds will be \
-                  checked coordinate-wise. It defines and closed interval.
-            low: Lower value for the bound interval. If it is an typing.Scalar it will be applied to \
-                  all the coordinates of a target vector. If it is a vector, the bounds will be \
-                  checked coordinate-wise. It defines and closed interval.
+            high: Higher value for the bound interval. If it is an typing.Scalar \
+                  it will be applied to all the coordinates of a target vector. \
+                  If it is a vector, the bounds will be checked coordinate-wise. \
+                  It defines and closed interval.
+            low: Lower value for the bound interval. If it is a typing.Scalar it \
+                 will be applied to all the coordinates of a target vector. \
+                 If it is a vector, the bounds will be checked coordinate-wise. \
+                 It defines and closed interval.
             shape: Shape of the array that will be bounded. Only needed if `high` and `low` are \
                    vectors and it is used to define the dimensions that will be bounded.
             dtype:  Data type of the array that will be bounded. It can be inferred from `high` \

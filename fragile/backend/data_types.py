@@ -1,17 +1,21 @@
 from typing import Any, Callable, Dict, Union
 
 import numpy
-import torch
 
-from fragile.backend.backend import Backend
+from fragile.backend.backend import Backend, torch
 
 
 class MetaTensor(type):
     def __getattr__(cls, item):
+        def wrapped(func, *args, **kwargs):
+            val = func(*args, **kwargs)
+            return tensor.to_backend(val)
+
         if Backend.is_numpy():
-            return getattr(numpy, item)
+            func = getattr(numpy, item)
         elif Backend.is_torch():
-            return getattr(torch, item)
+            func = getattr(torch, item)
+        return lambda *args, **kwargs: wrapped(func, *args, **kwargs)
 
     @property
     def type(cls):
@@ -156,7 +160,7 @@ class tensor(metaclass=MetaTensor):
             new_tensor = numpy.array(x, *args, **kwargs)
         elif Backend.is_torch():
             if dtype.is_tensor(x):
-                return x
+                return cls.to_backend(x, use_grad=requires_grad, device=device)
             try:
                 use_grad = Backend.use_grad() if requires_grad is None else requires_grad
                 device = Backend.get_device() if device is None else device
@@ -191,35 +195,66 @@ class tensor(metaclass=MetaTensor):
 
     @staticmethod
     def astype(x, dtype):
-        if Backend.is_numpy():
-            return x.astype(dtype)
-        elif Backend.is_torch():
-            return x.to(dtype)
+        funcs = {
+            "numpy": lambda x: x.astype(dtype),
+            "torch": lambda x: x.to(dtype),
+        }
+        return Backend.execute(x, funcs)
 
     @staticmethod
     def as_tensor(x, *args, **kwargs):
-        if Backend.is_numpy():
-            return numpy.asarray(x, *args, **kwargs)
-        elif Backend.is_torch():
-            return torch.as_tensor(x, *args, **kwargs)
+        funcs = {
+            "numpy": lambda x: numpy.asarray(x, *args, **kwargs),
+            "torch": lambda x: torch.as_tensor(x, *args, **kwargs),
+        }
+        return Backend.execute(x, funcs)
 
     @staticmethod
     def to_numpy(x):
         if isinstance(x, numpy.ndarray):
             return x
         try:
-            return x.cpu().numpy()
+            return x.cpu().detach().numpy()
         except Exception:
             return numpy.asarray(x)
 
     @classmethod
-    def to_backend(cls, x: typing.Tensor, use_grad: bool = None, device: str = None):
-        if Backend.is_numpy():
-            return cls.to_numpy(x)
+    def to_torch(
+        cls, x, use_grad: bool = None, device: str = None, copy: bool = False, *args, **kwargs
+    ):
+        def new_tensor(x, use_grad, device, *args, **kwargs):
+            try:
+                new_tensor = torch.tensor(
+                    x, *args, requires_grad=use_grad, device=device, **kwargs,
+                )
+            except Exception as e:
+                new_tensor = torch.tensor(x, *args, requires_grad=False, device=device, **kwargs,)
+            return new_tensor
+
         use_grad = use_grad if use_grad is not None else Backend.use_grad()
         device = device if device is not None else Backend.get_device()
+        if isinstance(x, numpy.ndarray):
+            x = (
+                torch.from_numpy(x)
+                if not copy
+                else new_tensor(x, use_grad, device, *args, **kwargs)
+            )
+        elif not isinstance(x, torch.Tensor):
+            try:
+                if not copy:
+                    x = torch.as_tensor(x)
+                else:
+                    x = new_tensor(x, use_grad, device, *args, **kwargs)
+            except Exception:
+                x = new_tensor(x, use_grad, device, *args, **kwargs)
         if x.requires_grad != use_grad and dtype.is_float(x):
             x = x.requires_grad_(use_grad)
         if x.device.type != device:
             x = x.to(device=device)
         return x
+
+    @classmethod
+    def to_backend(cls, x: typing.Tensor, use_grad: bool = None, device: str = None):
+        if Backend.is_numpy():
+            return cls.to_numpy(x)
+        return cls.to_torch(x, use_grad=use_grad, device=device)
