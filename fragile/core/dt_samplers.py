@@ -147,7 +147,7 @@ class UniformDt(BaseDtSampler):
             raise ValueError("env_states and batch_size cannot be both None.")
         batch_size = batch_size or env_states.n
         dt = self.random_state.uniform(low=self.min_dt, high=self.max_dt, size=batch_size)
-        dt = dt.astype(dtype=self._dtype)
+        dt = tensor.astype(dt, self._dtype)
         states = self.states_from_data(batch_size=batch_size, critic_score=dt, dt=dt)
         return states
 

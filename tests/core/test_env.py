@@ -1,13 +1,13 @@
 from typing import Callable, Tuple
+import warnings
 
-import numpy
+# import numpy
 from plangym import AtariEnvironment, ClassicControl
 import pytest
 
-from fragile.core.bounds import Bounds
+from fragile.backend import dtype, tensor
 from fragile.core.env import DiscreteEnv, Environment
 from fragile.core.states import StatesEnv, StatesModel
-from fragile.optimize.env import Function
 
 N_WALKERS = 10
 
@@ -29,16 +29,16 @@ def classic_control_env():
 def create_env_and_model_states(name="classic") -> Callable:
     def _atari_env():
         env = discrete_atari_env()
-        params = {"actions": {"dtype": numpy.int64}, "critic": {"dtype": numpy.float32}}
+        params = {"actions": {"dtype": dtype.int64}, "critic": {"dtype": dtype.float32}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
-        states.update(actions=numpy.ones(N_WALKERS), critic=numpy.ones(N_WALKERS))
+        states.update(actions=tensor.ones(N_WALKERS), critic=tensor.ones(N_WALKERS))
         return env, states
 
     def _classic_control_env():
         env = classic_control_env()
-        params = {"actions": {"dtype": numpy.int64}, "dt": {"dtype": numpy.float32}}
+        params = {"actions": {"dtype": dtype.int64}, "dt": {"dtype": dtype.float32}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
-        states.update(actions=numpy.ones(N_WALKERS), dt=numpy.ones(N_WALKERS))
+        states.update(actions=tensor.ones(N_WALKERS), dt=tensor.ones(N_WALKERS))
         return env, states
 
     if name.lower() == "pacman":
@@ -62,7 +62,12 @@ def env_data(request) -> Tuple[Environment, StatesModel]:
 
 @pytest.fixture(scope="class")
 def batch_size():
-    return 10
+    return N_WALKERS
+
+
+@pytest.fixture(scope="class")
+def states_dim():
+    return 5
 
 
 class TestEnvironment:
@@ -75,7 +80,6 @@ class TestEnvironment:
         env, model_states = env_data
         states = env.reset()
         assert isinstance(states, env.STATE_CLASS), states
-
         batch_size = 10
         states = env.reset(batch_size=batch_size)
         assert isinstance(states, env.STATE_CLASS), states
@@ -109,16 +113,16 @@ class TestEnvironment:
         assert hasattr(env, "observs_shape")
         assert isinstance(env.observs_shape, tuple)
 
-    def test_states_from_data(self, env_data, batch_size):
+    def test_states_from_data(self, env_data, batch_size, states_dim):
         env, model_states = env_data
-        states = numpy.zeros((batch_size, 5)).tolist()
-        observs = numpy.ones((batch_size, 5)).tolist()
-        rewards = numpy.arange(batch_size).tolist()
-        oobs = numpy.zeros(batch_size, dtype=bool).tolist()
+        states = tensor.zeros((batch_size, states_dim))
+        observs = tensor.ones((batch_size, states_dim))
+        rewards = tensor.arange(batch_size)
+        oobs = tensor.zeros(batch_size, dtype=dtype.bool)
         state = env.states_from_data(
             batch_size=batch_size, states=states, observs=observs, rewards=rewards, oobs=oobs
         )
         assert isinstance(state, StatesEnv)
         for val in state.vals():
-            assert isinstance(val, numpy.ndarray)
+            assert dtype.is_tensor(val)
             assert len(val) == batch_size

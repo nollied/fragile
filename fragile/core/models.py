@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 from numba import jit
 
-from fragile.backend import dtype, tensor, typing
+from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core.base_classes import BaseCritic, BaseModel
 from fragile.core.bounds import Bounds
 from fragile.core.env import DiscreteEnv
@@ -340,6 +340,7 @@ class BinarySwap(DiscreteModel):
 
         """
         import numpy
+
         @jit(nopython=True)
         def flip_values(actions: numpy.ndarray, flips: numpy.ndarray):
             for i in range(flips.shape[0]):
@@ -347,14 +348,17 @@ class BinarySwap(DiscreteModel):
                     actions[i, flips[i, j]] = numpy.logical_not(actions[i, flips[i, j]])
             return actions
 
-        actions = (
-            env_states.observs.copy()
-            if env_states is not None
-            else tensor.zeros((batch_size, self.n_actions))
-        )
-        actions = tensor.astype(actions, dtype.bool)
-        flips = self.random_state.randint(0, self.n_actions, size=(batch_size, self.n_swaps))
-        actions = tensor.astype(flip_values(actions, flips), dtype.int64)
+        with Backend.use_backend("numpy"):
+            actions = (
+                tensor.to_numpy(env_states.observs).copy()
+                if env_states is not None
+                else tensor.zeros((batch_size, self.n_actions))
+            )
+            actions = tensor.astype(actions, dtype.bool)
+
+            flips = self.random_state.randint(0, self.n_actions, size=(batch_size, self.n_swaps))
+            actions = tensor.astype(flip_values(actions, flips), dtype.int64)
+        actions = tensor(actions)
         return self.update_states_with_critic(
             actions=actions, batch_size=batch_size, model_states=model_states, **kwargs
         )

@@ -1,7 +1,7 @@
 from collections.abc import Iterable as _Iterable
 from typing import Iterable, Optional, Tuple, Union
 
-import numpy as numpy
+import numpy
 
 from fragile.backend import dtype as _dtype, functions, tensor, typing
 
@@ -63,11 +63,11 @@ class Bounds:
             raise TypeError("If shape is None high or low need to have .shape attribute.")
         # High and low will be arrays of target shape
         if not _dtype.is_tensor(high):
-            high = numpy.array(high) if isinstance(high, _Iterable) else numpy.ones(shape) * high
+            high = tensor(high) if isinstance(high, _Iterable) else tensor.ones(shape) * high
         if not _dtype.is_tensor(low):
-            low = numpy.array(low) if isinstance(low, _Iterable) else numpy.ones(shape) * low
-        self.high = high
-        self.low = low
+            low = tensor(low) if isinstance(low, _Iterable) else tensor.ones(shape) * low
+        self.high = tensor.astype(high, _dtype.float)
+        self.low = tensor.astype(low, _dtype.float)
         if dtype is not None:
             self.dtype = dtype
         elif hasattr(high, "dtype"):
@@ -121,7 +121,7 @@ class Bounds:
         for lo, hi in bounds:
             low.append(lo)
             high.append(hi)
-        low, high = numpy.array(low), numpy.array(high)
+        low, high = tensor(low), tensor(high)
         return Bounds(low=low, high=high)
 
     @staticmethod
@@ -148,15 +148,16 @@ class Bounds:
             :class:`Bounds` instance.
 
         """
-        pct = scale - 1
+        pct = tensor(scale - 1)
         big_scale = 1 + tensor.abs(pct)
         small_scale = 1 - tensor.abs(pct)
+        zero = tensor.astype(tensor(0.0), low.dtype)
         if pct > 0:
-            xmin_scaled = numpy.where(low < 0, low * big_scale, low * small_scale)
-            xmax_scaled = numpy.where(high < 0, high * small_scale, high * big_scale)
+            xmin_scaled = tensor.where(low < zero, low * big_scale, low * small_scale)
+            xmax_scaled = tensor.where(high < zero, high * small_scale, high * big_scale)
         else:
-            xmin_scaled = numpy.where(low < 0, low * small_scale, low * small_scale)
-            xmax_scaled = numpy.where(high < 0, high * big_scale, high * small_scale)
+            xmin_scaled = tensor.where(low < zero, low * small_scale, low * small_scale)
+            xmax_scaled = tensor.where(high < zero, high * big_scale, high * small_scale)
         return xmin_scaled, xmax_scaled
 
     @classmethod
@@ -189,7 +190,7 @@ class Bounds:
             Bounds shape float64 dtype (3,) low [ 0.5 -7.5  0.5] high [1.5 1.5 1.5]
 
         """
-        xmin, xmax = x.min(axis=0), x.max(axis=0)
+        xmin, xmax = functions.min(x, axis=0), functions.max(x, axis=0)
         xmin_scaled, xmax_scaled = cls.get_scaled_intervals(xmin, xmax, scale)
         return Bounds(low=xmin_scaled, high=xmax_scaled)
 
@@ -204,7 +205,7 @@ class Bounds:
             Clipped numpy array with all its values inside the defined bounds.
 
         """
-        return functions.clip(x, self.low, self.high)
+        return functions.clip(tensor.astype(x, _dtype.float), self.low, self.high)
 
     def points_in_bounds(self, x: typing.Tensor) -> Union[typing.Tensor, bool]:
         """
@@ -220,7 +221,7 @@ class Bounds:
             Numpy array of booleans indicating if a row lies inside the bounds.
 
         """
-        match = self.clip(x) == x
+        match = self.clip(x) == tensor.astype(x, _dtype.float)
         return match.all(1).flatten() if len(match.shape) > 1 else match.all()
 
     def safe_margin(

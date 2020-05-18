@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from fragile.backend import Backend
 from fragile.core import Bounds
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.optimize.models import CMAES, ESModel
@@ -22,7 +23,10 @@ model_fixture_params = ["es_model"]
 
 @pytest.fixture(scope="class", params=model_fixture_params)
 def model(request):
-    return create_model(request.param)()
+    prev_backend = Backend.get_current_backend()
+    Backend.set_backend("numpy")
+    yield create_model(request.param)()
+    Backend.set_backend(prev_backend)
 
 
 @pytest.fixture(scope="class")
@@ -67,12 +71,15 @@ def det_cmaes():
 
 
 class TestESModel:
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def create_model_states(self, model, batch_size: int = None):
         return StatesModel(batch_size=batch_size, state_dict=model.get_params_dict())
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def create_env_states(self, model, batch_size: int = None):
         return StatesEnv(batch_size=batch_size, state_dict=model.get_params_dict())
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_run_for_1000_predictions(self, model, batch_size):
         for _ in range(100):
             TestModel.test_predict(self, model, batch_size)
@@ -188,6 +195,7 @@ invsqrt_cov_iter_1 = np.array(
 
 
 class TestCMAES:
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_init_params(self, cmaes: CMAES):
         cmaes._init_algorithm_params(batch_size=8)
         # Constant params
@@ -211,6 +219,7 @@ class TestCMAES:
         assert cmaes.paths_sigma.shape == (cmaes.n_dims, 1)
         assert (cmaes.scaling_diag == np.ones((cmaes.n_dims, 1))).all()
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_sample_actions(self, det_cmaes):
         batch_size = 8
         assert det_cmaes._count_eval == 0
@@ -223,6 +232,7 @@ class TestCMAES:
         actions = np.array(model_states.actions.T)
         assert np.allclose(actions, actions_iter_1, rtol=1e-5, atol=1e-5)
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_update_evolution_paths(self, det_cmaes):
         model_states = det_cmaes.reset(
             batch_size=8, init_xmean=init_xmean, noise=noise_iter_1, model_states=None
@@ -246,6 +256,7 @@ class TestCMAES:
             det_cmaes.paths_covm - pc_iter_1
         )
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_adapt_covariance_matrix(self, det_cmaes):
         model_states = det_cmaes.reset(
             batch_size=8, init_xmean=init_xmean, noise=noise_iter_1, model_states=None
@@ -265,6 +276,7 @@ class TestCMAES:
             det_cmaes.cov_matrix, cov_matrix_iter_1, rtol=1e-6, atol=1e-6
         ), "dif: %s" % (det_cmaes.cov_matrix - cov_matrix_iter_1)
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_adapt_sigma(self, det_cmaes):
         test_sigma = 0.29992
         model_states = det_cmaes.reset(
@@ -281,6 +293,7 @@ class TestCMAES:
         det_cmaes._adapt_sigma()
         assert np.allclose(det_cmaes.sigma, test_sigma)
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="Only for numpy")
     def test_covariance_matrix_diagonalization(self, det_cmaes):
         model_states = det_cmaes.reset(
             batch_size=8, init_xmean=init_xmean, noise=noise_iter_1, model_states=None

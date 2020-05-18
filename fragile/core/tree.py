@@ -2,12 +2,12 @@ import copy
 from typing import Any, Dict, Generator, List, Set, Tuple, Union
 
 import networkx as nx
-#import numpy
 
-from fragile.backend import tensor, typing
+# import numpy
+
+from fragile.backend import Backend, random_state, tensor, typing
 from fragile.core.base_classes import BaseTree
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import random_state
 
 
 NodeId = Union[str, int]
@@ -148,7 +148,8 @@ class NetworkxTree(BaseTree):
             None
 
         """
-        leaf_ids = walkers_states.get("id_walkers")
+        leaf_ids = tensor.to_numpy(walkers_states.get("id_walkers"))
+        parent_ids = tensor.to_numpy(parent_ids)
         # Keep track of nodes that are active to make sure that they are not pruned
         self.last_added = set(leaf_ids) | set(parent_ids)
         for i, (leaf, parent) in enumerate(zip(leaf_ids, parent_ids)):
@@ -590,7 +591,9 @@ class HistoryTree(NetworkxTree):
             edge_data, next_node_data).
 
         """
-        for next_node in random_state.permutation(self.data.nodes):
+        with Backend.use_backend("numpy"):
+            permutaion = random_state.permutation(self.data.nodes)
+        for next_node in permutaion:
             if next_node == self.root_id:
                 continue
             node = self.get_parent(next_node)

@@ -1,7 +1,8 @@
-import copy
 from typing import Dict, Union
 
-from fragile.backend import dtype, tensor, typing
+import torch
+
+from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core.base_classes import BaseEnvironment
 from fragile.core.states import StatesEnv, StatesModel
 
@@ -143,8 +144,9 @@ class DiscreteEnv(Environment):
         Step the underlying :class:`plangym.Environment` using the ``step_batch`` \
         method of the ``plangym`` interface.
         """
+        dt = tensor.to_numpy(dt) if dtype.is_tensor(dt) else dt
         new_states, observs, rewards, ends, infos = self._env.step_batch(
-            actions=actions, states=states, dt=dt
+            actions=tensor.to_numpy(actions), states=tensor.to_numpy(states), dt=dt
         )
         game_ends = [inf.get("win", False) for inf in infos]
         data = {
@@ -171,9 +173,12 @@ class DiscreteEnv(Environment):
             batch_size.
 
         """
-        state, obs = self._env.reset()
-        states = tensor([copy.deepcopy(state) for _ in range(batch_size)])
-        observs = tensor([copy.deepcopy(obs) for _ in range(batch_size)])
+        with Backend.use_backend("numpy"):
+            state, obs = self._env.reset()
+            states = tensor([state.copy() for _ in range(batch_size)]).copy()
+            observs = tensor([obs.copy() for _ in range(batch_size)]).copy().astype(dtype.float32)
+        observs = tensor(observs)
+        states = tensor(states)
         rewards = tensor.zeros(batch_size, dtype=dtype.float32)
         oobs = tensor.zeros(batch_size, dtype=dtype.bool)
         new_states = self.states_from_data(

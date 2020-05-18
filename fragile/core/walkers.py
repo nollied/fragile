@@ -353,7 +353,7 @@ class SimpleWalkers(BaseWalkers):
         """
         if self._accumulate_rewards:
             if not dtype.is_tensor(self.states.get("cum_rewards")):
-                cum_rewards = tensor.zeros(self.n)
+                cum_rewards = tensor.zeros(rewards.shape[0])
             else:
                 cum_rewards = self.states.cum_rewards
             cum_rewards = cum_rewards + rewards
@@ -573,18 +573,18 @@ class Walkers(SimpleWalkers):
                 best_reward=best_reward,
                 best_state=best_state,
                 best_obs=best_obs,
-                best_id=copy.copy(self.states.id_walkers[ix]),
-                best_time=copy.copy(self.states.times[ix]),
+                best_id=tensor.copy(self.states.id_walkers[ix].detach(), requires_grad=False),
+                best_time=tensor.copy(self.states.times[ix]),
             )
 
     def fix_best(self):
         """Ensure the best state found is assigned to the last walker of the \
         swarm, so walkers can always choose to clone to the best state."""
         if self.states.best_reward is not None:
-            self.env_states.observs[-1] = self.states.best_obs.copy()
+            self.env_states.observs[-1] = tensor.copy(self.states.best_obs)
             self.states.cum_rewards[-1] = float(self.states.best_reward)
             self.states.id_walkers[-1] = copy.copy(self.states.best_id)
-            self.env_states.states[-1] = self.states.best_state.copy()
+            self.env_states.states[-1] = tensor.copy(self.states.best_state)
             self.states.times[-1] = copy.copy(self.states.best_time)
 
     def reset(
@@ -612,10 +612,10 @@ class Walkers(SimpleWalkers):
             self.env_states.rewards.argmin() if self.minimize else self.env_states.rewards.argmax()
         )
         self.states.update(
-            best_reward=copy.deepcopy(self.env_states.rewards[best_ix]),
-            best_obs=copy.deepcopy(self.env_states.observs[best_ix]),
-            best_state=copy.deepcopy(self.env_states.states[best_ix]),
-            best_id=copy.deepcopy(self.states.id_walkers[best_ix]),
+            best_reward=tensor.copy(self.env_states.rewards[best_ix]),
+            best_obs=tensor.copy(self.env_states.observs[best_ix]),
+            best_state=tensor.copy(self.env_states.states[best_ix]),
+            best_id=tensor.copy(self.states.id_walkers[best_ix].detach(), requires_grad=False),
         )
         if self.critic is not None:
             critic_score = self.critic.reset(

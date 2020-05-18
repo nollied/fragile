@@ -1,6 +1,9 @@
 """Framework for FAI algorithms development."""
 
 import warnings
+from fragile.backend import Backend
+
+Backend.set_backend("torch")
 
 warnings.filterwarnings(
     "ignore",

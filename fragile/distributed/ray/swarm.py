@@ -1,9 +1,9 @@
-import copy
 import traceback
 from typing import Callable
 
 import ray
 
+from fragile.backend import tensor
 from fragile.core.base_classes import BaseEnvironment, BaseModel, BaseTree
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.swarm import Swarm as CoreSwarm, Walkers as CoreWalkers
@@ -129,7 +129,7 @@ class RemoteSwarm(CoreSwarm):
         self.walkers.reset(env_states=env_states, model_states=model_states)
         if self.tree is not None:
             id_walkers = self.walkers.get("id_walkers")
-            root_id = id_walkers[0] if root_walker is None else copy.copy(root_walker.id_walkers)
+            root_id = id_walkers[0] if root_walker is None else tensor.copy(root_walker.id_walkers)
             self.tree.reset(
                 root_id=root_id,
                 env_states=self.walkers.env_states,
@@ -180,9 +180,7 @@ class RemoteSwarm(CoreSwarm):
         model_states = self.walkers.get("model_states")
         env_states = self.walkers.get("env_states")
         walkers_states = self.walkers.get("states")
-        parent_ids = (
-            copy.deepcopy(self.walkers.get("id_walkers")) if self.tree is not None else None
-        )
+        parent_ids = tensor.copy(self.walkers.get("id_walkers")) if self.tree is not None else None
 
         model_states = self.model.predict(
             env_states=env_states, model_states=model_states, walkers_states=walkers_states

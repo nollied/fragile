@@ -7,6 +7,7 @@ from holoviews import Store
 import numpy
 import pandas
 
+from fragile.backend import tensor
 from fragile.core.bounds import Bounds
 from fragile.core.functions import relativize
 from fragile.core.swarm import Swarm
@@ -133,7 +134,8 @@ class AtariBestFrame(RGB):
 
         """
         env = get_plangym_env(swarm)
-        env.set_state(state.astype(numpy.uint8).copy())
+        state = tensor.to_numpy(state)
+        env.set_state(state.astype(numpy.uint8))
         env.step(0)
         return numpy.asarray(env.ale.getScreenRGB(), dtype=numpy.uint8)
 

@@ -29,14 +29,14 @@ def create_eggholder_swarm():
 
 def create_atari_swarm():
     env = AtariEnvironment(name="MsPacman-ram-v0",)
-    dt = GaussianDt(min_dt=3, max_dt=100, loc_dt=5, scale_dt=2)
+    dt = GaussianDt(min_dt=10, max_dt=100, loc_dt=5, scale_dt=2)
     swarm = Swarm(
         model=lambda x: DiscreteUniform(env=x, critic=dt),
         env=lambda: DiscreteEnv(env),
         n_walkers=6,
-        max_epochs=20,
+        max_epochs=10,
         reward_scale=2,
-        reward_limit=100,
+        reward_limit=1,
     )
     return swarm
 

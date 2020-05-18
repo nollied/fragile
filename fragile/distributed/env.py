@@ -4,8 +4,9 @@ import sys
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
 
-import numpy
+# import numpy
 
+from fragile.backend import functions, typing
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
@@ -262,24 +263,15 @@ class _BatchEnv:
         """Use the underlying parallel environment to calculate the state transitions."""
         chunk_data = self._split_inputs_in_chunks(*args, **kwargs)
         split_results = self._make_transitions(chunk_data)
+
         merged = self._merge_data(split_results)
         return merged
 
     @staticmethod
-    def _merge_data(data_dicts: List[Dict[str, numpy.ndarray]]):
-        def group_data(vals):
-            try:
-                return (
-                    numpy.vstack(vals)
-                    if len(vals[0].shape) > 1
-                    else numpy.concatenate(vals).flatten()
-                )
-            except Exception:
-                raise ValueError("MIAU: %s %s" % (len(vals), vals[0].shape))
-
+    def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
-            grouped = group_data([ddict[k] for ddict in data_dicts])
+            grouped = functions.concatenate([ddict[k] for ddict in data_dicts])
             kwargs[k] = grouped
         return kwargs
 
@@ -317,7 +309,7 @@ class _ParallelEnvironment:
         for env in self._batch_env._envs:
             env.close()
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, numpy.ndarray]:
+    def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
         """Use the underlying parallel environment to calculate the state transitions."""
         return self._batch_env.make_transitions(*args, **kwargs)
 
@@ -417,7 +409,7 @@ class ParallelEnv(EnvWrapper):
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Union[Dict[str, numpy.ndarray], Tuple[numpy.ndarray, ...]]:
+    ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
         """Use the wrapped environment to get the data with no parallelization."""
         return self._local_env.states_to_data(model_states=model_states, env_states=env_states)
 
@@ -441,8 +433,8 @@ class ParallelEnv(EnvWrapper):
              reset.
 
         """
-        self._local_env.reset(batch_size=batch_size, env_states=env_states, **kwargs)
-        return self.parallel_env.reset(batch_size=batch_size, env_states=env_states, **kwargs)
+        states = self._local_env.reset(batch_size=batch_size, env_states=env_states, **kwargs)
+        return states
 
 
 class RayEnv(EnvWrapper):
@@ -529,20 +521,10 @@ class RayEnv(EnvWrapper):
         return merged
 
     @staticmethod
-    def _merge_data(data_dicts: List[Dict[str, numpy.ndarray]]):
-        def group_data(vals):
-            try:
-                return (
-                    numpy.vstack(vals)
-                    if len(vals[0].shape) > 1
-                    else numpy.concatenate(vals).flatten()
-                )
-            except Exception:
-                raise ValueError("MIAU: %s %s" % (len(vals), vals[0].shape))
-
+    def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
-            grouped = group_data([ddict[k] for ddict in data_dicts])
+            grouped = functions.concatenate([ddict[k] for ddict in data_dicts])
             kwargs[k] = grouped
         return kwargs
 

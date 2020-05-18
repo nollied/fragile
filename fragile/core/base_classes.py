@@ -1,8 +1,7 @@
 from typing import Callable, Dict, List, Tuple, Union
 
-from fragile.backend import dtype, typing
+from fragile.backend import dtype, random_state, typing
 from fragile.core.states import OneWalker, States, StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import RANDOM_SEED, random_state
 
 
 class StatesOwner:
@@ -15,7 +14,7 @@ class StatesOwner:
     STATE_CLASS = States
 
     @classmethod
-    def seed(cls, seed: int = RANDOM_SEED):
+    def seed(cls, seed: int = random_state.seed()):
         """Set the random seed of the random number generator."""
         cls.random_state.seed(seed)
 
@@ -40,7 +39,8 @@ class StatesOwner:
 
     def create_new_states(self, batch_size: int) -> "StatesOwner.STATE_CLASS":
         """Create new states of given batch_size to store the data of the class."""
-        return self.STATE_CLASS(state_dict=self.get_params_dict(), batch_size=batch_size)
+        param_dict = self.get_params_dict()
+        return self.STATE_CLASS(state_dict=param_dict, batch_size=batch_size)
 
     def states_from_data(self, batch_size: int, **kwargs) -> States:
         """

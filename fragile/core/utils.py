@@ -2,10 +2,7 @@ from typing import Any, Callable, Dict, Generator, Tuple, Union
 
 import numpy
 
-
-RANDOM_SEED = 160290
-random_state = numpy.random.RandomState(seed=RANDOM_SEED)
-
+from fragile.backend import Backend, dtype, tensor
 
 NUMPY_IGNORE_WARNINGS_PARAMS = {
     "divide": "ignore",
@@ -83,15 +80,22 @@ def resize_frame(
     """
     from PIL import Image
 
-    frame = Image.fromarray(frame)
-    frame = frame.convert(mode).resize(size=(width, height))
-    return numpy.array(frame)
+    frame = tensor.to_numpy(frame)
+    with Backend.use_backend(name="numpy"):
+        frame = Image.fromarray(frame)
+        frame = tensor.to_numpy(frame.convert(mode).resize(size=(width, height)))
+    return tensor(frame)
 
 
 def statistics_from_array(x: numpy.ndarray):
     """Return the (mean, std, max, min) of an array."""
     try:
-        return x.mean(), x.std(), x.max(), x.min()
+        return (
+            tensor.to_numpy(x).mean(),
+            tensor.to_numpy(x).std(),
+            tensor.to_numpy(x).max(),
+            tensor.to_numpy(x).min(),
+        )
     except AttributeError:
         return numpy.nan, numpy.nan, numpy.nan, numpy.nan
 
@@ -137,15 +141,10 @@ def split_kwargs_in_chunks(kwargs, n_chunks):
     chunk_size = int(numpy.ceil(n_values / n_chunks))
     for start, end in similiar_chunks_indexes(n_values, n_chunks):
         if start + chunk_size >= n_values - 2:  # Do not allow the last chunk to have size 1
-            yield {
-                k: v[start:n_values] if isinstance(v, numpy.ndarray) else v
-                for k, v in kwargs.items()
-            }
+            yield {k: v[start:n_values] if dtype.is_tensor(v) else v for k, v in kwargs.items()}
             break
         else:
-            yield {
-                k: v[start:end] if isinstance(v, numpy.ndarray) else v for k, v in kwargs.items()
-            }
+            yield {k: v[start:end] if dtype.is_tensor(v) else v for k, v in kwargs.items()}
 
 
 def split_args_in_chunks(args, n_chunks):

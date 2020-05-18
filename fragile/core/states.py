@@ -93,7 +93,7 @@ class States:
 
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
-        data = {k: tensor([v[index]]) if dtype.is_tensor(v) else v for k, v in self.items()}
+        data = {k: F.unsqueeze(v[index], 0) if dtype.is_tensor(v) else v for k, v in self.items()}
         return self.__class__(batch_size=1, **data)
 
     def __setitem__(self, key, value: Union[Tuple, List, typing.Tensor]):
@@ -294,12 +294,18 @@ class States:
             for name, val in attrs.items():
                 try:
                     data = getattr(self, name)
-                    if len(data.shape) == 0:
-                        data = tensor.copy(val)
+                    try:
+                        data[:] = tensor.copy(val).reshape(data.shape)
+                    except Exception as e:
+                        if dtype.is_tensor(data):
+                            setattr(self, name, tensor.copy(val))
+                        else:
+                            raise e
+                except (AttributeError, TypeError, KeyError, ValueError) as e1:
+                    if dtype.is_tensor(val):
+                        setattr(self, name, val)
                     else:
-                        data[:] = tensor.copy(val)
-                except (AttributeError, TypeError, KeyError, ValueError):
-                    setattr(self, name, copy.deepcopy(val))
+                        setattr(self, name, copy.deepcopy(val))
 
         if other is not None:
             update_or_set_attributes(other)
@@ -339,7 +345,10 @@ class States:
 
     def copy(self) -> "States":
         """Crete a copy of the current instance."""
-        param_dict = {str(name): val.copy() for name, val in self.items()}
+        param_dict = {
+            str(name): tensor.copy(val) if dtype.is_tensor(val) else copy.deepcopy(val)
+            for name, val in self.items()
+        }
         return States(batch_size=self.n, **param_dict)
 
     @staticmethod
@@ -372,13 +381,7 @@ class States:
                 del val["size"]
             if "shape" in val:
                 del val["shape"]
-
-            try:
-                tensor_dict[key] = tensor.zeros(sizes, **val)
-            except Exception as e:
-                print(val, sizes)
-                raise e
-                #tensor_dict[key] = numpy.zeros(sizes, **val)
+            tensor_dict[key] = tensor.zeros(sizes, **val)
         return tensor_dict
 
 
@@ -563,10 +566,10 @@ class StatesWalkers(States):
     def clone(self, **kwargs) -> Tuple[typing.Tensor, typing.Tensor]:
         """Perform the clone only on cum_rewards and id_walkers and reset the other arrays."""
         clone, compas = self.will_clone, self.compas_clone
-        self.cum_rewards[clone] = copy.deepcopy(self.cum_rewards[compas][clone])
-        self.id_walkers[clone] = copy.deepcopy(self.id_walkers[compas][clone])
-        self.virtual_rewards[clone] = copy.deepcopy(self.virtual_rewards[compas][clone])
-        self.times[clone] = copy.deepcopy(self.times[compas][clone])
+        self.cum_rewards[clone] = tensor.copy(self.cum_rewards[compas][clone])
+        self.id_walkers[clone] = tensor.copy(self.id_walkers[compas][clone])
+        self.virtual_rewards[clone] = tensor.copy(self.virtual_rewards[compas][clone])
+        self.times[clone] = tensor.copy(self.times[compas][clone])
         return clone, compas
 
     def reset(self):
@@ -592,7 +595,7 @@ class StatesWalkers(States):
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
         data = {
-            k: tensor([v[index]]) if dtype.is_tensor(v) and "best" not in k else v
+            k: F.unsqueeze(v[index]) if dtype.is_tensor(v) and "best" not in k else v
             for k, v in self.items()
         }
         return self.__class__(batch_size=1, **data)
@@ -644,7 +647,7 @@ class OneWalker(States):
         self._states_size = state.shape
         self._states_dtype = state.dtype
         self._times_dtype = dtype.int64
-        self._rewards_dtype = type(reward)
+        self._rewards_dtype = tensor(reward).dtype
         # Accept external definition of param_dict values
         walkers_dict = self.get_params_dict()
         if state_dict is not None:
@@ -662,12 +665,13 @@ class OneWalker(States):
                         "The provided attributes must be defined in state_dict."
                         "param_dict: %s\n kwargs: %s" % (state_dict, kwargs)
                     )
-        self.observs[:] = copy.deepcopy(observ)
-        self.states[:] = copy.deepcopy(state)
-        self.rewards[:] = copy.deepcopy(reward)
-        self.times[:] = copy.deepcopy(time)
+        self.observs[:] = tensor.copy(observ)
+        self.states[:] = tensor.copy(state)
+        # print("REWARDS SHAPE", self.rewards.shape, reward.shape, observ.shape, self.observs.shape)
+        self.rewards[:] = tensor.copy(reward) if dtype.is_tensor(reward) else copy.deepcopy(reward)
+        self.times[:] = tensor.copy(time) if dtype.is_tensor(time) else copy.deepcopy(time)
         self.id_walkers[:] = (
-            copy.deepcopy(id_walker) if id_walker is not None else F.hash_tensor(state)
+            tensor.copy(id_walker) if id_walker is not None else F.hash_tensor(state)
         )
         self.update(**kwargs)
 

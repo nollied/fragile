@@ -1,11 +1,12 @@
 import asyncio
 from typing import Callable, Dict, List, Tuple
 
-import numpy
+# import numpy
 
+from fragile.backend import typing, functions
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
-from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks, StateDict
+from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
 from fragile.distributed.ray import ray
 
 # The type hints of the base class are not supported by cloudpickle
@@ -139,29 +140,21 @@ class Environment:
         """
         return self.env.reset(batch_size=batch_size, env_states=env_states, **kwargs)
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return the parameter dictionary of the wrapped :class:`fragile.Environment`."""
         return self.env.get_params_dict()
 
 
 @ray.remote
-def merge_data(data_dicts: List[Dict[str, numpy.ndarray]]):
+def merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
     """
     Group together the data returned from calling ``make_transitions`` in several \
     remote :class:`Environment`.
     """
 
-    def group_data(vals):
-        try:
-            return (
-                numpy.vstack(vals) if len(vals[0].shape) > 1 else numpy.concatenate(vals).flatten()
-            )
-        except Exception:
-            raise ValueError("MIAU: %s %s" % (len(vals), vals[0].shape))
-
     kwargs = {}
     for k in data_dicts[0].keys():
-        grouped = group_data([ddict[k] for ddict in data_dicts])
+        grouped = functions.concatenate([ddict[k] for ddict in data_dicts])
         kwargs[k] = grouped
     return kwargs
 
