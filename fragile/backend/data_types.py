@@ -173,14 +173,14 @@ class tensor(metaclass=MetaTensor):
                 raise e
         return new_tensor
 
-    @staticmethod
-    def copy(x, requires_grad: bool = None, device=None):
+    @classmethod
+    def copy(cls, x, requires_grad: bool = None, device=None):
         def copy_torch(x: torch.Tensor, requires_grad, device):
             grad = requires_grad if requires_grad is not None else Backend.use_grad()
-            dev = Backend.get_device() if device is None else device
-            new_tensor = x.clone().to(dev)
+            new_tensor = x.clone()
             if not grad:
                 new_tensor = new_tensor.detach()
+            new_tensor = cls.to_backend(new_tensor, device=device, use_grad=requires_grad)
             return new_tensor
 
         funcs = {
