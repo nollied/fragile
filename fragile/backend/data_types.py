@@ -143,6 +143,13 @@ class dtype(metaclass=MetaScalar):
     def is_tensor(cls, x):
         return isinstance(x, tensor.type)  # or cls.is_hash_tensor(x)
 
+    @classmethod
+    def to_node_id(cls, x):
+        if Backend.is_numpy():
+            return str(x)
+        elif Backend.is_torch():
+            return int(x)
+
 
 class typing:
     Tensor = Union[numpy.ndarray, torch.Tensor]
@@ -179,6 +186,11 @@ class tensor(metaclass=MetaTensor):
 
     @classmethod
     def copy(cls, x, requires_grad: bool = None, device=None):
+        if x is None:
+            return
+        if not dtype.is_tensor(x):
+            x = tensor(x)
+
         def copy_torch(x: torch.Tensor, requires_grad, device):
             grad = requires_grad if requires_grad is not None else Backend.use_grad()
             new_tensor = x.clone()
@@ -247,8 +259,11 @@ class tensor(metaclass=MetaTensor):
                     x = new_tensor(x, use_grad, device, *args, **kwargs)
             except Exception:
                 x = new_tensor(x, use_grad, device, *args, **kwargs)
-        if x.requires_grad != use_grad and dtype.is_float(x):
-            x = x.requires_grad_(use_grad)
+        try:
+            if x.requires_grad != use_grad and dtype.is_float(x):
+                x = x.requires_grad_(use_grad)
+        except RuntimeError:
+            pass
         if x.device.type != device:
             x = x.to(device=device)
         return x

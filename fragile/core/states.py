@@ -533,7 +533,7 @@ class StatesWalkers(States):
         self.best_obs = None
         self.best_state = None
         self.best_reward = numpy.NINF
-        self.best_time = 0
+        self.best_time = 0.0
         self.times = None
         updated_dict = self.get_params_dict()
         if state_dict is not None:

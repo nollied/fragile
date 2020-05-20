@@ -9,6 +9,7 @@ from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
 from fragile.core.wrappers import BaseWrapper, EnvWrapper
+from fragile.distributed.ray import ray
 
 
 class _ExternalProcess:
@@ -574,8 +575,6 @@ class RayEnv(EnvWrapper):
             batch_size.
 
         """
-        from fragile.distributed.ray import ray
-
         reset = [
             env.reset.remote(batch_size=batch_size, env_states=env_states, *args, **kwargs)
             for env in self.envs

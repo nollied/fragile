@@ -5,7 +5,7 @@ import networkx as nx
 
 # import numpy
 
-from fragile.backend import Backend, random_state, tensor, typing
+from fragile.backend import Backend, dtype, random_state, tensor, typing
 from fragile.core.base_classes import BaseTree
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 
@@ -70,7 +70,7 @@ class NetworkxTree(BaseTree):
             edge_names: Names of the data attributes of the :class:`States` that \
                        will be stored as edge attributes in the internal graph.
         """
-        super(NetworkxTree, self).__init__(root_id=root_id)
+        super(NetworkxTree, self).__init__(root_id=dtype.to_node_id(root_id))
         self.next_prefix = next_prefix
         self.names = names if names is not None else []
         self.data: nx.DiGraph = nx.DiGraph()
@@ -119,7 +119,7 @@ class NetworkxTree(BaseTree):
             walkers_states=walkers_states,
             only_node_data=True,
         )
-        self.reset_graph(root_id=root_id, node_data=node_data, epoch=-1)
+        self.reset_graph(root_id=dtype.to_node_id(root_id), node_data=node_data, epoch=-1)
 
     def add_states(
         self,
@@ -204,7 +204,7 @@ class NetworkxTree(BaseTree):
             None.
 
         """
-        self.root_id = root_id if root_id is not None else self.root_id
+        self.root_id = dtype.to_node_id(root_id) if root_id is not None else self.root_id
         self.data: nx.DiGraph = nx.DiGraph()
         self.data.add_node(self.root_id, epoch=epoch, **node_data)
         self._node_count = 1
@@ -292,6 +292,7 @@ class NetworkxTree(BaseTree):
             None
 
         """
+        leaf_id = dtype.to_node_id(leaf_id)
         if (
             leaf_id == self.root_id
             or leaf_id in alive_nodes  # Remove only old nodes (inserted for 2+ epochs)
@@ -311,7 +312,7 @@ class NetworkxTree(BaseTree):
     def get_parent(self, node_id: NodeId) -> NodeId:
         """Get the node id of the parent of the target node."""
         try:
-            return list(self.data.in_edges(node_id))[0][0]
+            return list(self.data.in_edges(dtype.to_node_id(node_id)))[0][0]
         except (KeyError, IndexError):
             raise KeyError("Node %s does not have a parent in the graph" % node_id)
 
@@ -327,6 +328,7 @@ class NetworkxTree(BaseTree):
             It starts with ``self.root_id`` and ends with ``leaf_id``.
 
         """
+        leaf_id = dtype.to_node_id(leaf_id)
         nodes = [leaf_id]
         while leaf_id != self.root_id:
             node = self.get_parent(leaf_id)
@@ -349,6 +351,7 @@ class NetworkxTree(BaseTree):
             List of the node ids between ``root`` and ``leaf_id``.
 
         """
+        leaf_id = dtype.to_node_id(leaf_id)
         root = root_id if root_id is not None else self.root_id
         nodes = nx.shortest_path(self.data, root, leaf_id)
         return nodes
@@ -624,7 +627,7 @@ class HistoryTree(NetworkxTree):
         names = self._validate_names(names)
         return_children = any(name.startswith(self.next_prefix) for name in names)
         path_generator = self.path_data_generator(
-            node_ids=node_ids, return_children=return_children
+            node_ids=tensor.to_numpy(node_ids), return_children=return_children
         )
         return self._generate_batches(path_generator, names=names, batch_size=batch_size)
 
@@ -669,5 +672,6 @@ class HistoryTree(NetworkxTree):
             Generator providing the data corresponding to a branch of the internal tree.
 
         """
+        node_id = dtype.to_node_id(node_id)
         branch_path = self.get_path_node_ids(leaf_id=node_id)
         return self.iterate_path_data(branch_path, batch_size=batch_size, names=names)

@@ -2,7 +2,7 @@ from typing import Generator, Tuple, Union
 
 import numpy
 
-from fragile.backend import Backend, dtype, tensor
+from fragile.backend import Backend, dtype, functions, tensor, typing
 
 NUMPY_IGNORE_WARNINGS_PARAMS = {
     "divide": "ignore",
@@ -10,6 +10,11 @@ NUMPY_IGNORE_WARNINGS_PARAMS = {
     "under": "ignore",
     "invalid": "ignore",
 }
+
+StateDict = typing.StateDict
+Scalar = typing.Scalar
+DistanceFunction = typing.DistanceFunction
+hash_numpy = functions.hash_numpy
 
 
 def running_in_ipython() -> bool:

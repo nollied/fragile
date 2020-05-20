@@ -5,18 +5,19 @@ from fragile.backend.backend import Backend, torch
 from fragile.backend.data_types import dtype, tensor
 
 
-def hash_tensor(x):
-    def hash_numpy(x: numpy.ndarray) -> int:
-        """Return a value that uniquely identifies a numpy array."""
-        return xxhash.xxh64_hexdigest(x.tobytes())
+def hash_numpy(x: numpy.ndarray) -> int:
+    """Return a value that uniquely identifies a numpy array."""
+    return xxhash.xxh64_hexdigest(x.tobytes())
 
+
+def hash_tensor(x):
     def hash_torch(x):
         bytes = tensor.to_numpy(x).tobytes()
         return xxhash.xxh32_intdigest(bytes)
 
     funcs = {
         "numpy": hash_numpy,
-        "torch": hash_torch,  # hash(x),
+        "torch": hash_torch,
     }
     return Backend.execute(x, funcs)
 
