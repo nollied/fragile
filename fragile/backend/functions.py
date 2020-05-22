@@ -4,6 +4,23 @@ import xxhash
 from fragile.backend.backend import Backend, torch
 from fragile.backend.data_types import dtype, tensor
 
+AVAILABLE_FUNCTIONS = [
+    "argmax",
+    "hash_numpy",
+    "hash_tensor",
+    "concatenate",
+    "stack",
+    "clip",
+    "repeat",
+    "min",
+    "max",
+    "norm",
+    "unsqueeze",
+    "where",
+    "sqrt",
+    "tile",
+]
+
 
 def hash_numpy(x: numpy.ndarray) -> int:
     """Return a value that uniquely identifies a numpy array."""
@@ -12,8 +29,10 @@ def hash_numpy(x: numpy.ndarray) -> int:
 
 def hash_tensor(x):
     def hash_torch(x):
-        bytes = tensor.to_numpy(x).tobytes()
-        return xxhash.xxh32_intdigest(bytes)
+        if Backend.use_true_hash():
+            bytes = tensor.to_numpy(x).tobytes()
+            return xxhash.xxh32_intdigest(bytes)
+        return hash(x)
 
     funcs = {
         "numpy": hash_numpy,
@@ -65,12 +84,22 @@ def clip(tensor, a_min, a_max, out=None):
     return Backend.execute(tensor, funcs)
 
 
-def repeat(tensor, repeat, axis=None):
+def repeat(x, repeat, axis=None):
     funcs = {
         "numpy": lambda x: numpy.repeat(x, repeat, axis=axis),
         "torch": lambda x: torch.repeat_interleave(x, repeat, dim=axis),
     }
-    return Backend.execute(tensor, funcs)
+    return Backend.execute(x, funcs)
+
+
+def tile(x, repeat):
+    funcs = {
+        "numpy": lambda x: numpy.tile(x, repeat),
+        "torch": lambda x: torch.Tensor.repeat(
+            x, *repeat if isinstance(repeat, tuple) else repeat
+        ),
+    }
+    return Backend.execute(x, funcs)
 
 
 def norm(tensor, ord=None, axis=None, keepdims=False):
@@ -127,5 +156,57 @@ def unsqueeze(x, axis=0):
     funcs = {
         "numpy": lambda x: numpy.expand_dims(x, axis=axis),
         "torch": lambda x: x.unsqueeze(axis),
+    }
+    return Backend.execute(x, funcs)
+
+
+def where(cond, a, b, *args, **kwargs):
+    def where_torch(c, _a, _b):  # where not implemented for bool in cpu
+        was_bool = False
+        if _a.dtype == dtype.bool:
+            _a = _a.to(dtype.int32)
+            was_bool = True
+        if _b.dtype == dtype.bool:
+            _b = _b.to(dtype.int32)
+            was_bool = True
+        res = torch.where(c, _a, _b)
+        return res.to(dtype.bool) if was_bool else res
+
+    funcs = {
+        "numpy": lambda x: numpy.where(x, a, b, *args, **kwargs),
+        "torch": lambda x: where_torch(x, a, b),
+    }
+    return Backend.execute(cond, funcs)
+
+
+def argmax(x, axis=None, *args, **kwargs):
+    def argmax_torch(_x, axis):  # where not implemented for bool in
+        axis = axis if axis is not None else 0
+        was_bool = False
+        if _x.dtype == dtype.bool:
+            _x = _x.to(dtype.int32)
+            was_bool = True
+        res = torch.argmax(_x, dim=axis, *args, **kwargs)
+        return res.to(dtype.bool) if was_bool else res
+
+    funcs = {
+        "numpy": lambda x: numpy.argmax(x, axis=axis, *args, **kwargs),
+        "torch": lambda x: argmax_torch(x, axis=axis),
+    }
+    return Backend.execute(x, funcs)
+
+
+def sqrt(x, *args, **kwargs):
+    def sqrt_torch(_x):  # where not implemented for bool in
+        was_bool = False
+        if _x.dtype == dtype.int64:
+            _x = _x.to(dtype.float32)
+            was_bool = True
+        res = torch.sqrt(_x, *args, **kwargs)
+        return res.to(dtype.int64) if was_bool else res
+
+    funcs = {
+        "numpy": lambda x: numpy.sqrt(x, *args, **kwargs),
+        "torch": lambda x: sqrt_torch(x),
     }
     return Backend.execute(x, funcs)

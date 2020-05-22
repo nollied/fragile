@@ -177,7 +177,7 @@ class TestWalkers:
     def test_accumulate_rewards(self, walkers):
         walkers.reset()
         walkers._accumulate_rewards = True
-        walkers.states.update(cum_rewards={None, 3})  # Override array of Floats and set to None
+        walkers.states.update(cum_rewards=[0, 0])  # Override array of Floats and set to None
         walkers.states.update(cum_rewards=None)
         rewards = tensor.arange(len(walkers))
         walkers._accumulate_and_update_rewards(rewards)
@@ -193,12 +193,12 @@ class TestWalkers:
         walkers._accumulate_and_update_rewards(rewards)
         assert (walkers.states.cum_rewards == rewards + 1).all()
 
-    @pytest.mark.skipif(not Backend.is_numpy(), reason="hypothesis works on numpy")
     @given(observs=arrays(numpy.float32, shape=(N_WALKERS, 64, 64, 3)))
     def test_distances_not_crashes(self, walkers, observs):
+        observs = tensor.to_backend(observs)
         with numpy.errstate(**NUMPY_IGNORE_WARNINGS_PARAMS):
             walkers.env_states.update(observs=observs)
             walkers.calculate_distances()
-            assert isinstance(walkers.states.distances[0], dtype.float)
+            assert dtype.is_float(walkers.states.distances[0])
             assert len(walkers.states.distances.shape) == 1
             assert walkers.states.distances.shape[0] == walkers.n

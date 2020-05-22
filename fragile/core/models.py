@@ -370,7 +370,7 @@ class ContinuousModel(_DtModel):
     possible outcomes.
     """
 
-    def __init__(self, bounds: Bounds, critic: Optional[BaseCritic] = None, **kwargs):
+    def __init__(self, bounds: Bounds=None, critic: Optional[BaseCritic] = None, env=None, **kwargs):
         """
         Initialize a :class:`RandomContinuous`.
 
@@ -381,6 +381,10 @@ class ContinuousModel(_DtModel):
             **kwargs: Ignored. Only defined to march :class:`Model` interface.
 
         """
+        try:
+            bounds = bounds if bounds is not None else env.bounds
+        except Exception:
+            raise ValueError("If bounds is None and env.bounds is not available.")
         super(ContinuousModel, self).__init__(critic=critic)
         self.bounds = bounds
 
@@ -436,7 +440,7 @@ class NormalContinuous(ContinuousModel):
 
     def __init__(
         self,
-        bounds: Bounds,
+        bounds: Bounds=None,
         loc: Union[int, float, typing.Tensor] = 0.0,
         scale: Optional[Union[int, float, typing.Tensor]] = 1.0,
         critic: Optional[BaseCritic] = None,
@@ -453,7 +457,7 @@ class NormalContinuous(ContinuousModel):
             **kwargs: Ignored. Only defined to march :class:`Model` interface.
 
         """
-        super(NormalContinuous, self).__init__(critic=critic, bounds=bounds)
+        super(NormalContinuous, self).__init__(critic=critic, bounds=bounds, **kwargs)
         self.loc = loc
         self.scale = scale
 

@@ -7,11 +7,17 @@ from fragile.backend.backend import Backend, torch
 
 class MetaTensor(type):
     def __getattr__(cls, item):
-        def wrapped(func, *args, **kwargs):
+        from fragile.backend import functions
+        def wrapped(func, *args, **kwargs):  # Handle device placement automatically
             val = func(*args, **kwargs)
+            #t = tensor.to_backend(val)
+            if isinstance(val, torch.Tensor):
+                assert not val.requires_grad
             return tensor.to_backend(val)
 
-        if Backend.is_numpy():
+        if item in functions.AVAILABLE_FUNCTIONS:  # Functions available within tensor namespace
+            func = getattr(functions, item)
+        elif Backend.is_numpy():
             func = getattr(numpy, item)
         elif Backend.is_torch():
             func = getattr(torch, item)
@@ -19,30 +25,8 @@ class MetaTensor(type):
 
     @property
     def type(cls):
-        if Backend.is_numpy():
-            return numpy.ndarray
-        elif Backend.is_torch():
-            return torch.Tensor
-
-
-class __FragileTensor:
-    def __init__(self, wrapped):
-        self._wrappped = wrapped
-
-    def __getattr__(self, item):
-        return getattr(self._wrappped, item)
-
-    def __subclasscheck__(self, subclass):
-        print("checking instance", subclass, type(self._wrappped))
-        if subclass == tensor:
-            return dtype.is_tensor(self._wrappped)
-        return self._wrappped.__subclasscheck__(subclass)
-
-    def __instancecheck__(self, instance):
-        print("checking instance", instance, type(self._wrappped))
-        if instance == tensor:
-            return dtype.is_tensor(self._wrappped)
-        return self._wrappped.__instancecheck__(instance)
+        funcs = {"numpy": lambda x: numpy.ndarray, "torch": lambda x: torch.Tensor}
+        return Backend.execute(None, funcs)
 
 
 class MetaScalar(type):
@@ -53,31 +37,23 @@ class MetaScalar(type):
 
     @property
     def uint8(cls):
-        if Backend.is_numpy():
-            return numpy.uint8
-        elif Backend.is_torch():
-            return torch.uint8
+        funcs = {"numpy": lambda x: numpy.uint8, "torch": lambda x: torch.uint8}
+        return Backend.execute(None, funcs)
 
     @property
     def int16(cls):
-        if Backend.is_numpy():
-            return numpy.int16
-        elif Backend.is_torch():
-            return torch.int16
+        funcs = {"numpy": lambda x: numpy.int16, "torch": lambda x: torch.int16}
+        return Backend.execute(None, funcs)
 
     @property
     def int32(cls):
-        if Backend.is_numpy():
-            return numpy.int32
-        elif Backend.is_torch():
-            return torch.int32
+        funcs = {"numpy": lambda x: numpy.int32, "torch": lambda x: torch.int32}
+        return Backend.execute(None, funcs)
 
     @property
     def int64(cls):
-        if Backend.is_numpy():
-            return numpy.int64
-        elif Backend.is_torch():
-            return torch.int64
+        funcs = {"numpy": lambda x: numpy.int64, "torch": lambda x: torch.int64}
+        return Backend.execute(None, funcs)
 
     @property
     def int(cls):
@@ -86,44 +62,37 @@ class MetaScalar(type):
 
     @property
     def float(cls):
-        if Backend.is_numpy():
-            return numpy.float32
-        elif Backend.is_torch():
-            return torch.float32
+        funcs = {"numpy": lambda x: numpy.float32, "torch": lambda x: torch.float32}
+        return Backend.execute(None, funcs)
 
     @property
     def float16(cls):
-        if Backend.is_numpy():
-            return numpy.float16
-        elif Backend.is_torch():
-            return torch.float16
+        funcs = {"numpy": lambda x: numpy.float16, "torch": lambda x: torch.float16}
+        return Backend.execute(None, funcs)
 
     @property
     def float32(cls):
-        if Backend.is_numpy():
-            return numpy.float32
-        elif Backend.is_torch():
-            return torch.float32
+        funcs = {"numpy": lambda x: numpy.float32, "torch": lambda x: torch.float32}
+        return Backend.execute(None, funcs)
 
     @property
     def float64(cls):
-        if Backend.is_numpy():
-            return numpy.float64
-        elif Backend.is_torch():
-            return torch.float64
+        funcs = {"numpy": lambda x: numpy.float64, "torch": lambda x: torch.float64}
+        return Backend.execute(None, funcs)
 
     @property
     def hash_type(cls):
-        if Backend.is_numpy():
-            return numpy.dtype("<U64")
-        elif Backend.is_torch():
-            return cls.int64
+        funcs = {"numpy": lambda x: numpy.dtype("<U64"), "torch": lambda x: torch.int64}
+        return Backend.execute(None, funcs)
 
 
 class dtype(metaclass=MetaScalar):
     @classmethod
     def is_bool(cls, x):
-        return isinstance(x, (bool, dtype.bool))
+        dtypes = (bool, dtype.bool)
+        if cls.is_tensor(x):
+            return x.dtype in dtypes
+        return isinstance(x, dtypes)
 
     @classmethod
     def is_float(cls, x):
@@ -151,14 +120,40 @@ class dtype(metaclass=MetaScalar):
             return int(x)
 
 
-class typing:
+class MetaTyping(type):
+    @property
+    def int(self):
+        try:
+            return Union[int, dtype.int64, dtype.int32, dtype.int16]
+        except Exception as e:
+            return int
+
+    @property
+    def float(self):
+        try:
+            return Union[float, dtype.float64, dtype.float32, dtype.float16]
+        except Exception as e:
+            return float
+
+    @property
+    def bool(self):
+        try:
+            return Union[bool, dtype.bool]
+        except Exception as e:
+            return bool
+
+    @property
+    def Scalar(self):
+        try:
+            return Union[self.float, self.int]
+        except Exception as e:
+            return Union[int, float]
+
+
+class typing(metaclass=MetaTyping):
     Tensor = Union[numpy.ndarray, torch.Tensor]
-    int = Union[int, dtype.int64, dtype.int32, dtype.int16]
-    float = Union[float, dtype.float64, dtype.float32, dtype.float16]
-    bool = Union[bool, dtype.bool]
     StateDict = Dict[str, Dict[str, Any]]
     DistanceFunction = Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray]
-    Scalar = Union[float, int]
 
 
 class tensor(metaclass=MetaTensor):
@@ -242,7 +237,8 @@ class tensor(metaclass=MetaTensor):
             except Exception as e:
                 new_tensor = torch.tensor(x, *args, requires_grad=False, device=device, **kwargs,)
             return new_tensor
-
+        if isinstance(x, torch.Tensor):
+            return x
         use_grad = use_grad if use_grad is not None else Backend.use_grad()
         device = device if device is not None else Backend.get_device()
         if isinstance(x, numpy.ndarray):
@@ -251,10 +247,11 @@ class tensor(metaclass=MetaTensor):
                 if not copy
                 else new_tensor(x, use_grad, device, *args, **kwargs)
             )
+
         elif not isinstance(x, torch.Tensor):
             try:
                 if not copy:
-                    x = torch.as_tensor(x)
+                    return cls.as_tensor(x)
                 else:
                     x = new_tensor(x, use_grad, device, *args, **kwargs)
             except Exception:

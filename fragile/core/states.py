@@ -293,18 +293,9 @@ class States:
             for name, val in attrs.items():
                 try:
                     data = getattr(self, name)
-                    try:
-                        data[:] = tensor.copy(val).reshape(data.shape)
-                    except Exception as e:
-                        if dtype.is_tensor(data):
-                            setattr(self, name, tensor.copy(val))
-                        else:
-                            raise e
-                except (AttributeError, TypeError, KeyError, ValueError) as e1:
-                    if dtype.is_tensor(val):
-                        setattr(self, name, val)
-                    else:
-                        setattr(self, name, copy.deepcopy(val))
+                    data[:] = val.reshape(data.shape)
+                except (AttributeError, TypeError, KeyError, ValueError, RuntimeError, IndexError):
+                    setattr(self, name, val)
 
         if other is not None:
             update_or_set_attributes(other)
@@ -565,10 +556,10 @@ class StatesWalkers(States):
     def clone(self, **kwargs) -> Tuple[typing.Tensor, typing.Tensor]:
         """Perform the clone only on cum_rewards and id_walkers and reset the other arrays."""
         clone, compas = self.will_clone, self.compas_clone
-        self.cum_rewards[clone] = tensor.copy(self.cum_rewards[compas][clone])
-        self.id_walkers[clone] = tensor.copy(self.id_walkers[compas][clone])
-        self.virtual_rewards[clone] = tensor.copy(self.virtual_rewards[compas][clone])
-        self.times[clone] = tensor.copy(self.times[compas][clone])
+        self.cum_rewards[clone] = self.cum_rewards[compas][clone]
+        self.id_walkers[clone] = self.id_walkers[compas][clone]
+        self.virtual_rewards[clone] = self.virtual_rewards[compas][clone]
+        self.times[clone] = self.times[compas][clone]
         return clone, compas
 
     def reset(self):

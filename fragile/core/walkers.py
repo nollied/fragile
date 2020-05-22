@@ -559,9 +559,9 @@ class Walkers(SimpleWalkers):
     def update_best(self):
         """Keep track of the best state found and its reward."""
         ix = self.get_best_index()
-        best_obs = tensor.copy(self.env_states.observs[ix])
-        best_reward = float(self.states.cum_rewards[ix])
-        best_state = tensor.copy(self.env_states.states[ix])
+        best_obs = self.env_states.observs[ix]
+        best_reward = self.states.cum_rewards[ix]
+        best_state = self.env_states.states[ix]
         best_is_in_bounds = not bool(self.env_states.oobs[ix])
         has_improved = (
             self.states.best_reward > best_reward
@@ -581,11 +581,11 @@ class Walkers(SimpleWalkers):
         """Ensure the best state found is assigned to the last walker of the \
         swarm, so walkers can always choose to clone to the best state."""
         if self.states.best_reward is not None:
-            self.env_states.observs[-1] = tensor.copy(self.states.best_obs)
+            self.env_states.observs[-1] = self.states.best_obs
             self.states.cum_rewards[-1] = float(self.states.best_reward)
-            self.states.id_walkers[-1] = copy.copy(self.states.best_id)
-            self.env_states.states[-1] = tensor.copy(self.states.best_state)
-            self.states.times[-1] = copy.copy(self.states.best_time)
+            self.states.id_walkers[-1] = self.states.best_id
+            self.env_states.states[-1] = self.states.best_state
+            self.states.times[-1] = self.states.best_time
 
     def reset(
         self,
@@ -612,10 +612,10 @@ class Walkers(SimpleWalkers):
             self.env_states.rewards.argmin() if self.minimize else self.env_states.rewards.argmax()
         )
         self.states.update(
-            best_reward=tensor.copy(self.env_states.rewards[best_ix]),
-            best_obs=tensor.copy(self.env_states.observs[best_ix]),
-            best_state=tensor.copy(self.env_states.states[best_ix]),
-            best_id=tensor.copy(self.states.id_walkers[best_ix], requires_grad=False),
+            best_reward=self.env_states.rewards[best_ix],
+            best_obs=self.env_states.observs[best_ix],
+            best_state=self.env_states.states[best_ix],
+            best_id=self.states.id_walkers[best_ix],
         )
         if self.critic is not None:
             critic_score = self.critic.reset(

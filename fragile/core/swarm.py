@@ -1,11 +1,10 @@
-import copy
 import logging
 import traceback
 from typing import Any, Callable, Iterable, List
 
 import numpy
 
-from fragile.backend import typing
+from fragile.backend import tensor, typing
 from fragile.core.base_classes import (
     BaseCritic,
     BaseEnvironment,
@@ -271,7 +270,7 @@ class Swarm(BaseSwarm):
             root_id = (
                 self.walkers.get("id_walkers")[0]
                 if root_walker is None
-                else copy.copy(root_walker.id_walkers)
+                else tensor.copy(root_walker.id_walkers)
             )
             self.tree.reset(
                 root_id=root_id,
@@ -438,10 +437,7 @@ class Swarm(BaseSwarm):
         model_states = self.walkers.model_states
         env_states = self.walkers.env_states
 
-        parent_ids = (
-            copy.deepcopy(self.walkers.states.id_walkers) if self.tree is not None else None
-        )
-
+        parent_ids = tensor.copy(self.walkers.states.id_walkers) if self.tree is not None else None
         model_states = self.model.predict(
             env_states=env_states, model_states=model_states, walkers_states=self.walkers.states
         )
@@ -476,9 +472,9 @@ class Swarm(BaseSwarm):
             self.tree.prune_tree(alive_leafs=leaf_nodes)
 
     def _update_env_with_root(self, root_walker, env_states) -> StatesEnv:
-        env_states.rewards[:] = copy.deepcopy(root_walker.rewards[0])
-        env_states.observs[:] = copy.deepcopy(root_walker.observs[0])
-        env_states.states[:] = copy.deepcopy(root_walker.states[0])
+        env_states.rewards[:] = tensor.copy(root_walker.rewards[0])
+        env_states.observs[:] = tensor.copy(root_walker.observs[0])
+        env_states.states[:] = tensor.copy(root_walker.states[0])
         return env_states
 
 
