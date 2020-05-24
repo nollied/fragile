@@ -14,7 +14,7 @@ class MetaTensor(type):
 
         func = None
         if item in api.AVAILABLE_FUNCTIONS:  # Functions available within tensor namespace
-            func = getattr(api, item)
+            func = getattr(api.API, item)
         elif Backend.is_numpy():
             if func is not None:
                 return func
