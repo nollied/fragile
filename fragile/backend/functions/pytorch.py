@@ -31,6 +31,10 @@ def stack(x, axis=0, out=None):
 
 
 def clip(x, a_min, a_max, out=None):
+    from fragile.backend.fragile_tensor import tensor
+    _tensor = min(x, other=tensor.astype(tensor(a_max), dtype=x.dtype))
+    return max(_tensor, other=tensor.astype(tensor(a_min), dtype=x.dtype), out=out)
+
     _tensor = torch.zeros_like(x)
     if dtype.is_tensor(a_min) and not dtype.is_tensor(a_max):
         for i, x_row in enumerate(a_min):
