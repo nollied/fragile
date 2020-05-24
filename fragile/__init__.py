@@ -2,9 +2,7 @@
 
 import warnings
 
-from fragile.backend import Backend, slogging
-
-Backend.set_defaults("numpy")
+from fragile.backend import slogging
 
 warnings.filterwarnings(
     "ignore",

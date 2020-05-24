@@ -2,7 +2,7 @@ import numpy
 import xxhash
 
 from fragile.backend.backend import Backend
-from fragile.backend.data_types import dtype, tensor
+from fragile.backend.fragile_tensor import tensor
 
 
 class Hasher:
@@ -35,8 +35,8 @@ class Hasher:
         return self._seed
 
     def get_array_of_ids(self, n: int):
-        ids = numpy.arange(n) + self._seed
-        self._seed += n
+        ids = numpy.arange(n) + self._seed + 1
+        self._seed += n + 1
         return tensor.as_tensor(ids)
 
     def hash_tensor(self, x):

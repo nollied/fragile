@@ -471,7 +471,7 @@ class Swarm(BaseSwarm):
         Remove all the branches that are do not have alive walkers at their leaf nodes.
         """
         if self.tree is not None:
-            leaf_nodes = set(tensor.to_numpy(self.get("id_walkers")[self.walkers.states.in_bounds]))
+            leaf_nodes = self.get("id_walkers")[self.walkers.states.in_bounds]
             self.tree.prune_tree(alive_leafs=leaf_nodes)
 
     def _update_env_with_root(self, root_walker, env_states) -> StatesEnv:

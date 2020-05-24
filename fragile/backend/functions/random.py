@@ -2,7 +2,8 @@ import numpy
 
 
 from fragile.backend.backend import Backend, torch
-from fragile.backend.data_types import tensor, typing
+from fragile.backend.data_types import typing
+from fragile.backend.fragile_tensor import tensor
 
 
 class MetaTorchRandomState(type):
