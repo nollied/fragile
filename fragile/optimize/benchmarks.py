@@ -102,7 +102,7 @@ class Sphere(OptimBenchmark):
 
 
 class Rastrigin(OptimBenchmark):
-    benchmark = tensor(0.)
+    benchmark = tensor(0.0)
 
     def __init__(self, dims: int, *args, **kwargs):
         super(Rastrigin, self).__init__(dims=dims, function=rastrigin, *args, **kwargs)
@@ -125,7 +125,7 @@ class EggHolder(OptimBenchmark):
 
     @staticmethod
     def get_bounds(dims=None):
-        bounds = [(-512., 512.), (-512., 512.)]
+        bounds = [(-512.0, 512.0), (-512.0, 512.0)]
         return Bounds.from_tuples(bounds)
 
     @property

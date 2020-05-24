@@ -370,7 +370,9 @@ class ContinuousModel(_DtModel):
     possible outcomes.
     """
 
-    def __init__(self, bounds: Bounds=None, critic: Optional[BaseCritic] = None, env=None, **kwargs):
+    def __init__(
+        self, bounds: Bounds = None, critic: Optional[BaseCritic] = None, env=None, **kwargs
+    ):
         """
         Initialize a :class:`RandomContinuous`.
 
@@ -440,7 +442,7 @@ class NormalContinuous(ContinuousModel):
 
     def __init__(
         self,
-        bounds: Bounds=None,
+        bounds: Bounds = None,
         loc: Union[int, float, typing.Tensor] = 0.0,
         scale: Optional[Union[int, float, typing.Tensor]] = 1.0,
         critic: Optional[BaseCritic] = None,

@@ -7,18 +7,22 @@ from fragile.backend.backend import Backend, torch
 
 class MetaTensor(type):
     def __getattr__(cls, item):
-        from fragile.backend import functions
+        from fragile.backend.functions import api
+
         def wrapped(func, *args, **kwargs):  # Handle device placement automatically
             val = func(*args, **kwargs)
-            #t = tensor.to_backend(val)
-            if isinstance(val, torch.Tensor):
-                assert not val.requires_grad
+            # t = tensor.to_backend(val)
+            # if isinstance(val, torch.Tensor):
+            #    assert not val.requires_grad
             return tensor.to_backend(val)
 
-        if item in functions.AVAILABLE_FUNCTIONS:  # Functions available within tensor namespace
-            func = getattr(functions, item)
+        func = None
+        if item in api.AVAILABLE_FUNCTIONS:  # Functions available within tensor namespace
+            func = getattr(api, item)
         elif Backend.is_numpy():
-            func = getattr(numpy, item)
+            if func is not None:
+                return func
+            return getattr(numpy, item)
         elif Backend.is_torch():
             func = getattr(torch, item)
         return lambda *args, **kwargs: wrapped(func, *args, **kwargs)
@@ -82,7 +86,10 @@ class MetaScalar(type):
 
     @property
     def hash_type(cls):
-        funcs = {"numpy": lambda x: numpy.dtype("<U64"), "torch": lambda x: torch.int64}
+        funcs = {
+            "numpy": lambda x: numpy.dtype("<U64") if Backend.use_true_hash() else numpy.int64,
+            "torch": lambda x: torch.int64,
+        }
         return Backend.execute(None, funcs)
 
 
@@ -115,7 +122,7 @@ class dtype(metaclass=MetaScalar):
     @classmethod
     def to_node_id(cls, x):
         if Backend.is_numpy():
-            return str(x)
+            return str(x) if Backend.use_true_hash() else int
         elif Backend.is_torch():
             return int(x)
 
@@ -159,7 +166,7 @@ class typing(metaclass=MetaTyping):
 class tensor(metaclass=MetaTensor):
     def __new__(cls, x, requires_grad: bool = None, device: str = None, *args, **kwargs):
         if Backend.is_numpy():
-            new_tensor = numpy.array(x, *args, **kwargs)
+            new_tensor = numpy.asarray(x, *args, **kwargs)
         elif Backend.is_torch():
             if dtype.is_tensor(x):
                 return cls.to_backend(x, use_grad=requires_grad, device=device)
@@ -237,6 +244,7 @@ class tensor(metaclass=MetaTensor):
             except Exception as e:
                 new_tensor = torch.tensor(x, *args, requires_grad=False, device=device, **kwargs,)
             return new_tensor
+
         if isinstance(x, torch.Tensor):
             return x
         use_grad = use_grad if use_grad is not None else Backend.use_grad()

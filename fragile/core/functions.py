@@ -2,12 +2,12 @@ from typing import Callable
 
 # import numpy
 
-from fragile.backend import dtype, functions, random_state, tensor, typing
+from fragile.backend import dtype, random_state, tensor, typing
 
 
 def l2_norm(x: typing.Tensor, y: typing.Tensor) -> typing.Tensor:
     """Euclidean distance between two batches of points stacked across the first dimension."""
-    return functions.norm(x - y, axis=1)
+    return tensor.norm(x - y, axis=1)
 
 
 def relativize(x: typing.Tensor) -> typing.Tensor:
@@ -18,9 +18,10 @@ def relativize(x: typing.Tensor) -> typing.Tensor:
     if float(std) == 0:
         return tensor.ones(len(x), dtype=orig.dtype)
     standard = (x - x.mean()) / std
-    standard[standard > 0] = tensor.log(1.0 + standard[standard > 0]) + 1.0
-    standard[standard <= 0] = tensor.exp(standard[standard <= 0])
-    return standard
+    res = tensor.where(standard > 0.0, tensor.log(1.0 + standard) + 1.0, tensor.exp(standard))
+    # standard[standard > 0] = tensor.log(1.0 + standard[standard > 0]) + 1.0
+    # standard[standard <= 0] = tensor.exp(standard[standard <= 0])
+    return res
 
 
 def get_alives_indexes(oobs: typing.Tensor):
@@ -129,9 +130,9 @@ def cross_clone(
 ):
     """Perform a clone operation between two different groups of points."""
     compas_ix = random_state.permutation(tensor.arange(len(ext_virtual_rewards)))
-    host_vr = host_virtual_rewards.flatten()
-    ext_vr = ext_virtual_rewards.flatten()
-    clone_probs = (ext_vr[compas_ix] - host_vr) / tensor.where(ext_vr > eps, ext_vr, tensor(eps))
+    host_vr = tensor.astype(host_virtual_rewards.flatten(), dtype=dtype.float32)
+    ext_vr = tensor.astype(ext_virtual_rewards.flatten(), dtype=dtype.float32)
+    clone_probs = (ext_vr[compas_ix] - host_vr) / tensor.where(ext_vr > eps, ext_vr, tensor(eps, dtype=dtype.float32))
     will_clone = clone_probs.flatten() > random_state.random(len(clone_probs))
     if host_oobs is not None:
         will_clone[host_oobs] = True

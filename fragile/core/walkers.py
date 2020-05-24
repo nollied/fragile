@@ -1,9 +1,8 @@
-import copy
 from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 import numpy
 
-from fragile.backend import dtype, functions, tensor, typing
+from fragile.backend import dtype, tensor, typing
 from fragile.core.base_classes import BaseCritic, BaseWalkers
 from fragile.core.functions import relativize
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
@@ -124,11 +123,11 @@ class SimpleWalkers(BaseWalkers):
 
         The returned ids are integers representing the hash of the different states.
         """
-        return tensor(self.env_states.hash_values("states"))
+        return tensor(self.env_states.hash_walkers("states"))
 
     def update_ids(self):
         """Update the unique id of each walker and store it in the :class:`StatesWalkers`."""
-        self.states.update(id_walkers=tensor.copy(self.ids()))
+        self.states.update(id_walkers=self.ids())
 
     @property
     def states(self) -> StatesWalkers:
@@ -269,14 +268,14 @@ class SimpleWalkers(BaseWalkers):
             one contains the ids of the states after the cloning process.
 
         """
-        old_ids = set(tensor.copy(self.states.id_walkers))
+        #old_ids = set(numpy.unique(tensor.to_numpy(self.states.id_walkers)))
         self.states.in_bounds = tensor.logical_not(self.env_states.oobs)
         self.calculate_distances()
         self.calculate_virtual_reward()
         self.update_clone_probs()
         self.clone_walkers()
-        new_ids = set(tensor.copy(self.states.id_walkers))
-        return old_ids, new_ids
+        #new_ids = set(numpy.unique(tensor.to_numpy(self.states.id_walkers)))
+        return None, None#old_ids, new_ids
 
     def clone_walkers(self) -> None:
         """
@@ -332,8 +331,8 @@ class SimpleWalkers(BaseWalkers):
                 self._accumulate_and_update_rewards(kwargs["rewards"])
                 del kwargs["rewards"]
             self.states.update(**kwargs)
-        if model_states is not None and "dt" in model_states.keys():
-            times = self.model_states.get("dt") + self.states.get("times")
+        if model_states is not None and self.model_states.get("dt") is not None:
+            times = self.model_states.get("dt") + self.env_states.get("times")
             self.states.update(times=times)
         if isinstance(env_states, StatesEnv):
             self._env_states.update(env_states)
@@ -403,7 +402,6 @@ class Walkers(SimpleWalkers):
         ignore_clone: Optional[Dict[str, Set[str]]] = None,
         critic: Optional[BaseCritic] = None,
         minimize: bool = False,
-        best_walker: Optional[Tuple[typing.Tensor, typing.Tensor, typing.Scalar]] = None,
         reward_limit: float = None,
         **kwargs
     ):
@@ -451,11 +449,7 @@ class Walkers(SimpleWalkers):
         if critic is not None:
             kwargs["critic_score"] = kwargs.get("critic_score", tensor.zeros(n_walkers))
         self.dtype = dtype.float
-        if best_walker is not None:
-            best_state, best_obs, best_reward = best_walker
-            best_id = functions.hash_tensor(best_state)
-        else:
-            best_state, best_obs, best_reward, best_id = (None, None, numpy.NINF, None)
+        best_state, best_obs, best_reward, best_id = (None, None, numpy.NINF, None)
         super(Walkers, self).__init__(
             n_walkers=n_walkers,
             env_state_params=env_state_params,
@@ -573,8 +567,8 @@ class Walkers(SimpleWalkers):
                 best_reward=best_reward,
                 best_state=best_state,
                 best_obs=best_obs,
-                best_id=tensor.copy(self.states.id_walkers[ix], requires_grad=False),
-                best_time=tensor.copy(self.states.times[ix]),
+                best_id=self.states.id_walkers[ix],
+                best_time=self.env_states.times[ix],
             )
 
     def fix_best(self):
@@ -585,7 +579,7 @@ class Walkers(SimpleWalkers):
             self.states.cum_rewards[-1] = float(self.states.best_reward)
             self.states.id_walkers[-1] = self.states.best_id
             self.env_states.states[-1] = self.states.best_state
-            self.states.times[-1] = self.states.best_time
+            self.env_states.times[-1] = self.states.best_time
 
     def reset(
         self,

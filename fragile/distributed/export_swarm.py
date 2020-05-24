@@ -44,9 +44,9 @@ class ExportedWalkers(States):
         """
         params = {
             "id_walkers": {"dtype": dtype.hash_type},
-            "rewards": {"dtype": dtype.float},
-            "observs": {"dtype": dtype.float},
-            "states": {"dtype": dtype.float},
+            "rewards": {"dtype": dtype.float32},
+            "observs": {"dtype": dtype.float32},
+            "states": {"dtype": dtype.float64},
         }
         return params
 
@@ -84,10 +84,10 @@ class ExportedWalkers(States):
         """Return a copy of the current instance."""
         new_walkers = ExportedWalkers(batch_size=len(self))
         new_walkers.update(
-            id_walkers=tensor(self.id_walkers),
-            rewards=tensor(self.rewards),
-            states=tensor(self.states),
-            observs=tensor(self.observs),
+            id_walkers=tensor.copy(self.id_walkers),
+            rewards=tensor.copy(self.rewards),
+            states=tensor.copy(self.states),
+            observs=tensor.copy(self.observs),
         )
         return new_walkers
 
@@ -125,10 +125,10 @@ class BestWalker(ExportedWalkers):
         other_improves = curr_best > other_best if self.minimize else curr_best < other_best
         if other_improves:
             ix = walkers.get_best_index(self.minimize)
-            self.states = tensor(walkers.states[ix])  # tensor.copy(walkers.states[ix])
-            self.observs = tensor(walkers.observs[ix])
-            self.rewards = tensor(walkers.rewards[ix])
-            self.id_walkers = tensor(walkers.id_walkers[ix])
+            self.states = tensor.copy(walkers.states[ix])  # tensor.copy(walkers.states[ix])
+            self.observs = tensor.copy(walkers.observs[ix])
+            self.rewards = tensor.copy(walkers.rewards[ix])
+            self.id_walkers = tensor.copy(walkers.id_walkers[ix])
 
 
 class ExportSwarm(SwarmWrapper):
@@ -255,10 +255,10 @@ class ExportSwarm(SwarmWrapper):
 
         if self._imported_best_is_better(walkers):
             best_ix = walkers.get_best_index(self.swarm.walkers.minimize)
-            best_reward = tensor(walkers.rewards[best_ix])
-            best_state = tensor(walkers.states[best_ix])
-            best_obs = tensor(walkers.observs[best_ix])
-            best_id = tensor(walkers.id_walkers[best_ix])
+            best_reward = tensor.copy(walkers.rewards[best_ix])
+            best_state = tensor.copy(walkers.states[best_ix])
+            best_obs = tensor.copy(walkers.observs[best_ix])
+            best_id = tensor.copy(walkers.id_walkers[best_ix])
 
             self.swarm.walkers.states.update(
                 best_reward=best_reward, best_state=best_state, best_obs=best_obs, best_id=best_id

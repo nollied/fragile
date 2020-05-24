@@ -123,7 +123,7 @@ class NetworkxTree(BaseTree):
 
     def add_states(
         self,
-        parent_ids: List[int],
+        parent_ids: List[NodeId],
         env_states: StatesEnv = None,
         model_states: StatesModel = None,
         walkers_states: StatesWalkers = None,

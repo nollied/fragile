@@ -1,8 +1,7 @@
 import numpy
-import xxhash
 
 from fragile.backend.backend import Backend, torch
-from fragile.backend.data_types import dtype, tensor
+from fragile.backend.data_types import dtype
 
 AVAILABLE_FUNCTIONS = [
     "argmax",
@@ -19,26 +18,8 @@ AVAILABLE_FUNCTIONS = [
     "where",
     "sqrt",
     "tile",
+    "logical_or",
 ]
-
-
-def hash_numpy(x: numpy.ndarray) -> int:
-    """Return a value that uniquely identifies a numpy array."""
-    return xxhash.xxh64_hexdigest(x.tobytes())
-
-
-def hash_tensor(x):
-    def hash_torch(x):
-        if Backend.use_true_hash():
-            bytes = tensor.to_numpy(x).tobytes()
-            return xxhash.xxh32_intdigest(bytes)
-        return hash(x)
-
-    funcs = {
-        "numpy": hash_numpy,
-        "torch": hash_torch,
-    }
-    return Backend.execute(x, funcs)
 
 
 def concatenate(tensors, axis=0, out=None):
@@ -210,3 +191,11 @@ def sqrt(x, *args, **kwargs):
         "torch": lambda x: sqrt_torch(x),
     }
     return Backend.execute(x, funcs)
+
+
+def logical_or(a, b):
+    funcs = {
+        "numpy": lambda x: numpy.logical_or(x, b),
+        "torch": lambda x: x + a,
+    }
+    return Backend.execute(a, funcs)

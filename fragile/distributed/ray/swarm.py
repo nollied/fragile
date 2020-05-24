@@ -129,7 +129,7 @@ class RemoteSwarm(CoreSwarm):
         self.walkers.reset(env_states=env_states, model_states=model_states)
         if self.tree is not None:
             id_walkers = self.walkers.get("id_walkers")
-            root_id = id_walkers[0] if root_walker is None else tensor.copy(root_walker.id_walkers)
+            root_id = id_walkers[0] if root_walker is None else tensor.copy(root_walker.id_walkers[0])
             self.tree.reset(
                 root_id=root_id,
                 env_states=self.walkers.env_states,

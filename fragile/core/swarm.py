@@ -266,12 +266,15 @@ class Swarm(BaseSwarm):
         )
         model_states.update(init_actions=model_states.actions)
         self.walkers.reset(env_states=env_states, model_states=model_states)
+        root_id = (
+            self.walkers.get("id_walkers")[0]
+            if root_walker is None
+            else tensor.copy(root_walker.id_walkers[0])
+        )
+        self.walkers.states.id_walkers[:] = root_id
+        self.walkers.states.best_id = root_id
         if self.tree is not None:
-            root_id = (
-                self.walkers.get("id_walkers")[0]
-                if root_walker is None
-                else tensor.copy(root_walker.id_walkers)
-            )
+
             self.tree.reset(
                 root_id=root_id,
                 env_states=self.walkers.env_states,
@@ -456,7 +459,7 @@ class Swarm(BaseSwarm):
         """
         if self.tree is not None:
             self.tree.add_states(
-                parent_ids=parent_ids,
+                parent_ids=tensor.to_numpy(parent_ids),
                 env_states=self.walkers.env_states,
                 model_states=self.walkers.model_states,
                 walkers_states=self.walkers.states,
@@ -468,13 +471,13 @@ class Swarm(BaseSwarm):
         Remove all the branches that are do not have alive walkers at their leaf nodes.
         """
         if self.tree is not None:
-            leaf_nodes = set(self.get("id_walkers"))
+            leaf_nodes = set(tensor.to_numpy(self.get("id_walkers")[self.walkers.states.in_bounds]))
             self.tree.prune_tree(alive_leafs=leaf_nodes)
 
     def _update_env_with_root(self, root_walker, env_states) -> StatesEnv:
-        env_states.rewards[:] = tensor.copy(root_walker.rewards[0])
-        env_states.observs[:] = tensor.copy(root_walker.observs[0])
-        env_states.states[:] = tensor.copy(root_walker.states[0])
+        env_states.rewards[:] = root_walker.rewards
+        env_states.states[:] = root_walker.states
+        env_states.observs = tensor.tile(root_walker.observs, (len(env_states), 1))
         return env_states
 
 

@@ -4,7 +4,7 @@ import sys
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
 
-from fragile.backend import functions, typing
+from fragile.backend import tensor, typing
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
@@ -270,7 +270,7 @@ class _BatchEnv:
     def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
-            grouped = functions.concatenate([ddict[k] for ddict in data_dicts])
+            grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
             kwargs[k] = grouped
         return kwargs
 
@@ -531,7 +531,7 @@ class RayEnv(EnvWrapper):
     def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
-            grouped = functions.concatenate([ddict[k] for ddict in data_dicts])
+            grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
             kwargs[k] = grouped
         return kwargs
 

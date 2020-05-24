@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-from fragile.backend import dtype, functions as F, tensor, typing
+from fragile.backend import dtype, tensor, typing
 from fragile.core.base_classes import BaseCritic
 from fragile.core.states import States, StatesEnv, StatesModel, StatesWalkers
 
@@ -209,6 +209,6 @@ class GaussianDt(BaseDtSampler):
             raise ValueError("env_states and batch_size cannot be both None.")
         batch_size = batch_size or env_states.n
         dt = self.random_state.normal(loc=self.mean_dt, scale=self.std_dt, size=batch_size)
-        dt = tensor.astype(F.clip(dt, self.min_dt, self.max_dt), self._dtype)
+        dt = tensor.astype(tensor.clip(dt, self.min_dt, self.max_dt), self._dtype)
         states = self.states_from_data(batch_size=batch_size, critic_score=dt, dt=dt)
         return states

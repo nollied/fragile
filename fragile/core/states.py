@@ -3,8 +3,7 @@ from typing import Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
 import numpy
 
-from fragile.backend import functions as F
-from fragile.backend.data_types import dtype, tensor, typing
+from fragile.backend import dtype, hasher, tensor, typing
 from fragile.core.utils import similiar_chunks_indexes
 
 
@@ -54,6 +53,7 @@ class States:
         """
         attr_dict = self.params_to_arrays(state_dict, batch_size) if state_dict is not None else {}
         attr_dict.update(kwargs)
+        self._tensor_names = [k for k, v in attr_dict.items() if dtype.is_tensor(v)]
         self._names = list(attr_dict.keys())
         self._attr_dict = attr_dict
         self.update(**self._attr_dict)
@@ -92,7 +92,7 @@ class States:
 
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
-        data = {k: F.unsqueeze(v[index], 0) if dtype.is_tensor(v) else v for k, v in self.items()}
+        data = {k: tensor.unsqueeze(v[index], 0) if dtype.is_tensor(v) else v for k, v in self.items()}
         return self.__class__(batch_size=1, **data)
 
     def __setitem__(self, key, value: Union[Tuple, List, typing.Tensor]):
@@ -120,21 +120,15 @@ class States:
         return string
 
     def __hash__(self) -> int:
-        _hash = hash(
-            tuple([F.hash_tensor(x) if dtype.is_tensor(x) else hash(x) for x in self.vals()])
-        )
-        return _hash
+        return hasher.hash_state(self)
 
     def group_hash(self, name: str) -> int:
         """Return a unique id for a given attribute."""
-        val = getattr(self, name)
-        return F.hash_tensor(val) if dtype.is_tensor(val) else hash(val)
+        return hasher.hash_tensor(self[name])
 
-    def hash_values(self, name: str) -> List[int]:
+    def hash_walkers(self, name: str) -> List[int]:
         """Return a unique id for each walker attribute."""
-        values = getattr(self, name)
-        hashes = [F.hash_tensor(val) if dtype.is_tensor(val) else hash(val) for val in values]
-        return hashes
+        return hasher.hash_walkers(self[name])
 
     @staticmethod
     def merge_states(states: Iterable["States"]) -> "States":
@@ -186,7 +180,7 @@ class States:
                         % (name, data.shape)
                     )
                 vals.append(value)
-            return F.concatenate(vals)
+            return tensor.concatenate(vals)
 
         # Assumes all states have the same names.
         data = {name: merge_one_name(states, name) for name in states[0]._names}
@@ -291,11 +285,7 @@ class States:
 
         def update_or_set_attributes(attrs: Union[dict, States]):
             for name, val in attrs.items():
-                try:
-                    data = getattr(self, name)
-                    data[:] = val.reshape(data.shape)
-                except (AttributeError, TypeError, KeyError, ValueError, RuntimeError, IndexError):
-                    setattr(self, name, val)
+                setattr(self, name, val)
 
         if other is not None:
             update_or_set_attributes(other)
@@ -413,6 +403,7 @@ class StatesEnv(States):
         self.rewards = None
         self.oobs = None
         self.terminals = None
+        self.times = None
         updated_dict = self.get_params_dict()
         if state_dict is not None:
             updated_dict.update(state_dict)
@@ -424,6 +415,7 @@ class StatesEnv(States):
             "states": {"dtype": dtype.float64},
             "observs": {"dtype": dtype.float32},
             "rewards": {"dtype": dtype.float32},
+            "times": {"dtype": dtype.float32},
             "oobs": {"dtype": dtype.bool},
             "terminals": {"dtype": dtype.bool},
         }
@@ -524,8 +516,9 @@ class StatesWalkers(States):
         self.best_obs = None
         self.best_state = None
         self.best_reward = numpy.NINF
+        self.best_epoch = 0
         self.best_time = 0.0
-        self.times = None
+
         updated_dict = self.get_params_dict()
         if state_dict is not None:
             updated_dict.update(state_dict)
@@ -540,7 +533,6 @@ class StatesWalkers(States):
         params = {
             "id_walkers": {"dtype": dtype.hash_type},
             "compas_clone": {"dtype": dtype.int64},
-            "times": {"dtype": dtype.int64},
             "processed_rewards": {"dtype": dtype.float},
             "virtual_rewards": {"dtype": dtype.float},
             "cum_rewards": {"dtype": dtype.float},
@@ -559,7 +551,6 @@ class StatesWalkers(States):
         self.cum_rewards[clone] = self.cum_rewards[compas][clone]
         self.id_walkers[clone] = self.id_walkers[compas][clone]
         self.virtual_rewards[clone] = self.virtual_rewards[compas][clone]
-        self.times[clone] = self.times[compas][clone]
         return clone, compas
 
     def reset(self):
@@ -572,7 +563,6 @@ class StatesWalkers(States):
             id_walkers=tensor.zeros(self.n, dtype=dtype.hash_type),
             compas_dist=tensor.arange(self.n),
             compas_clone=tensor.arange(self.n),
-            times=tensor.zeros(self.n, dtype=dtype.int64),
             processed_rewards=tensor.zeros(self.n, dtype=dtype.float),
             cum_rewards=tensor.zeros(self.n, dtype=dtype.float),
             virtual_rewards=tensor.ones(self.n, dtype=dtype.float),
@@ -585,7 +575,7 @@ class StatesWalkers(States):
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
         data = {
-            k: F.unsqueeze(v[index]) if dtype.is_tensor(v) and "best" not in k else v
+            k: tensor.unsqueeze(v[index]) if dtype.is_tensor(v) and "best" not in k else v
             for k, v in self.items()
         }
         return self.__class__(batch_size=1, **data)
@@ -606,7 +596,7 @@ class OneWalker(States):
         observ: typing.Tensor,
         reward: typing.Scalar,
         id_walker=None,
-        time=0,
+        time=0.0,
         state_dict: typing.StateDict = None,
         **kwargs
     ):
@@ -636,7 +626,6 @@ class OneWalker(States):
         self._observs_dtype = observ.dtype
         self._states_size = state.shape
         self._states_dtype = state.dtype
-        self._times_dtype = dtype.int64
         self._rewards_dtype = tensor(reward).dtype
         # Accept external definition of param_dict values
         walkers_dict = self.get_params_dict()
@@ -660,7 +649,7 @@ class OneWalker(States):
         self.rewards[:] = tensor.copy(reward) if dtype.is_tensor(reward) else copy.deepcopy(reward)
         self.times[:] = tensor.copy(time) if dtype.is_tensor(time) else copy.deepcopy(time)
         self.id_walkers[:] = (
-            tensor.copy(id_walker) if id_walker is not None else F.hash_tensor(state)
+            tensor.copy(id_walker.squeeze()) if id_walker is not None else hasher.hash_tensor(state)
         )
         self.update(**kwargs)
 
@@ -693,6 +682,6 @@ class OneWalker(States):
             "rewards": {"dtype": self._rewards_dtype},
             "observs": {"dtype": self._observs_dtype, "size": self._observs_size},
             "states": {"dtype": self._states_dtype, "size": self._states_size},
-            "times": {"dtype": self._times_dtype},
+            "times": {"dtype": dtype.float32},
         }
         return params

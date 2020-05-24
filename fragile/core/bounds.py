@@ -3,7 +3,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import numpy
 
-from fragile.backend import dtype as _dtype, functions, tensor, typing
+from fragile.backend import dtype as _dtype, tensor, typing
 
 
 class Bounds:
@@ -192,7 +192,7 @@ class Bounds:
             Bounds shape float64 dtype (3,) low [ 0.5 -7.5  0.5] high [1.5 1.5 1.5]
 
         """
-        xmin, xmax = functions.min(x, axis=0), functions.max(x, axis=0)
+        xmin, xmax = tensor.min(x, axis=0), tensor.max(x, axis=0)
         xmin_scaled, xmax_scaled = cls.get_scaled_intervals(xmin, xmax, scale)
         return Bounds(low=xmin_scaled, high=xmax_scaled)
 
@@ -207,7 +207,7 @@ class Bounds:
             Clipped numpy array with all its values inside the defined bounds.
 
         """
-        return functions.clip(tensor.astype(x, _dtype.float), self.low, self.high)
+        return tensor.clip(tensor.astype(x, _dtype.float), self.low, self.high)
 
     def points_in_bounds(self, x: typing.Tensor) -> Union[typing.Tensor, bool]:
         """

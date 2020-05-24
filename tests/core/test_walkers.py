@@ -102,7 +102,7 @@ class TestWalkers:
     def test_get_best_index(self, walkers):
         # Rewards = [1,1,...] InBounds = [0,0,...]
         walkers.states.update(
-            cum_rewards=tensor.ones(walkers.n), in_bounds=tensor.zeros(walkers.n)
+            cum_rewards=tensor.ones(walkers.n), in_bounds=tensor.zeros(walkers.n, dtype=dtype.bool)
         )
         best_idx = walkers.get_best_index()
         # If there are no in_bound rewards, the last walker is returned
@@ -116,7 +116,9 @@ class TestWalkers:
         oobs_rewards[oobs_best_idx] = 1
         some_oobs = tensor.zeros(walkers.n)
         some_oobs[oobs_best_idx] = 1
-        walkers.states.update(cum_rewards=oobs_rewards, in_bounds=some_oobs)
+        walkers.states.update(
+            cum_rewards=oobs_rewards, in_bounds=tensor.astype(some_oobs, dtype.bool)
+        )
         best_idx = walkers.get_best_index()
         assert best_idx == oobs_best_idx
 
@@ -128,15 +130,17 @@ class TestWalkers:
         mixed_rewards = tensor.full((walkers.n,), fill_value=negative_val, dtype=dtype.float)
         mixed_best = 1  # could be any index
         mixed_rewards[mixed_best] = positive_val
-        walkers.states.update(cum_rewards=mixed_rewards, in_bounds=tensor.ones(walkers.n))
+        walkers.states.update(
+            cum_rewards=mixed_rewards, in_bounds=tensor.ones(walkers.n, dtype=dtype.bool)
+        )
         best_idx = walkers.get_best_index()
         assert best_idx == mixed_best
 
     def test_calculate_end_condition(self, walkers):
         walkers.reset()
-        walkers.env_states.update(oobs=tensor.ones(walkers.n, dtype=bool))
+        walkers.env_states.update(oobs=tensor.ones(walkers.n, dtype=dtype.bool))
         assert walkers.calculate_end_condition()
-        walkers.env_states.update(oobs=tensor.zeros(walkers.n), dtype=bool)
+        walkers.env_states.update(oobs=tensor.zeros(walkers.n, dtype=dtype.bool))
         assert not walkers.calculate_end_condition()
         walkers.max_epochs = 10
         walkers._epoch = 8
@@ -145,7 +149,7 @@ class TestWalkers:
         assert walkers.calculate_end_condition()
 
     def test_alive_compas(self, walkers):
-        end_cond = tensor.astype(tensor.zeros_like(walkers.env_states.oobs), bool)
+        end_cond = tensor.astype(tensor.zeros_like(walkers.env_states.oobs), dtype.bool)
         end_cond[3] = True
         walkers.states.in_bounds = end_cond
         compas = walkers.get_in_bounds_compas()
@@ -156,7 +160,7 @@ class TestWalkers:
 
     def test_update_clone_probs(self, walkers):
         walkers.reset()
-        walkers.states.update(virtual_rewards=relativize(tensor.arange(walkers.n)))
+        walkers.states.update(virtual_rewards=relativize(tensor.arange(walkers.n, dtype=dtype.float32)))
         walkers.update_clone_probs()
         assert 0 < tensor.sum(walkers.states.clone_probs == walkers.states.clone_probs[0]), (
             walkers.states.virtual_rewards,

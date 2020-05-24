@@ -3,8 +3,7 @@ from typing import Any, Callable, List, Tuple
 
 import numpy
 
-from fragile.backend import Backend, dtype, tensor, typing
-from fragile.backend.functions import hash_tensor
+from fragile.backend import Backend, dtype, hasher, tensor, typing
 from fragile.core import Environment, Swarm, SwarmWrapper, Walkers
 from fragile.core.base_classes import BaseModel, BaseTree
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
@@ -576,6 +575,7 @@ class StepSwarm(Swarm):
             observ=self.root_env_states.observs[0],
             state=self.root_env_states.states[0],
             time=0,
+            id_walker=self.root_walkers_states.id_walkers[0],
         )
         if self.tree is not None:
             self.tree.reset(
@@ -631,7 +631,7 @@ class StepSwarm(Swarm):
 
     def step_root_state(self):
         """Make the state transition of the root state."""
-        best_ix = self.walkers.get_best_index() if self.step_after_improvement else None
+        best_ix = self.walkers.get_best_index()# if self.step_after_improvement else None
         if self._should_step_root_state(best_ix):
             model_states = self.root_model.predict(
                 root_env_states=self.root_env_states, walkers=self.walkers
@@ -640,10 +640,10 @@ class StepSwarm(Swarm):
             new_env_states = self.env.step(
                 model_states=model_states, env_states=self.root_env_states
             )
-            self.update_states(new_env_states, model_states)
+            self.update_states(new_env_states, model_states, best_ix)
             self.update_tree(states_ids=[parent_id])
 
-    def update_states(self, env_states, model_states):
+    def update_states(self, env_states, model_states, best_ix):
         """Update the data of the root state."""
         self.root_env_states.update(other=env_states)
         self.root_model_states.update(other=model_states)
@@ -654,17 +654,19 @@ class StepSwarm(Swarm):
             cum_rewards = self.root_env_states.rewards
         dt = self.root_model_states.dt if hasattr(self.root_model_states, "dt") else 1.0
         times = dt + self.root_walker.times
+        root_id = tensor(self.walkers.states.id_walkers[best_ix])
         self.root_walkers_states.update(
             cum_rewards=cum_rewards,
-            id_walkers=tensor([hash_tensor(self.root_env_states.states[0])]),
             times=times,
+            id_walkers=tensor([root_id]),
         )
 
         self.root_walker = OneWalker(
-            reward=copy.deepcopy(cum_rewards[0]),
-            observ=copy.deepcopy(self.root_env_states.observs[0]),
-            state=copy.deepcopy(self.root_env_states.states[0]),
-            time=copy.deepcopy(times[0]),
+            reward=tensor.copy(cum_rewards[0]),
+            observ=tensor.copy(self.root_env_states.observs[0]),
+            state=tensor.copy(self.root_env_states.states[0]),
+            time=tensor.copy(times[0]),
+            id_walker=root_id.squeeze(),
         )
 
     def _should_step_root_state(self, best_ix=None):
@@ -699,22 +701,24 @@ class StepToBest(StepSwarm):
         if self._should_step_root_state(best_ix):
             self.root_env_states = self.walkers.env_states[best_ix]
             self.root_walkers_states = self.walkers.states[best_ix]
-            self.update_states()
+            self.update_states(best_ix)
             self.update_tree([self.best_id])
 
-    def update_states(self):
+    def update_states(self, best_ix):
         """Update the data of the root walker after an internal Swarm iteration has finished."""
         # The accumulation of rewards is already done in the internal Swarm
         cum_rewards = self.root_walkers_states.cum_rewards
         times = self.root_walkers_states.times + self.root_walker.times
+        root_id = tensor(self.walkers.states.id_walkers[best_ix])
         self.root_walkers_states.update(
             cum_rewards=cum_rewards,
-            id_walkers=tensor([hash_tensor(self.root_env_states.states[0])]),
+            id_walkers=tensor([root_id]),
             times=times,
         )
         self.root_walker = OneWalker(
-            reward=copy.deepcopy(cum_rewards[0]),
-            observ=copy.deepcopy(self.root_env_states.observs[0]),
-            state=copy.deepcopy(self.root_env_states.states[0]),
-            time=copy.deepcopy(times[0]),
+            reward=tensor.copy(cum_rewards[0]),
+            observ=tensor.copy(self.root_env_states.observs[0]),
+            state=tensor.copy(self.root_env_states.states[0]),
+            time=tensor.copy(times[0]),
+            id_walker=root_id,
         )

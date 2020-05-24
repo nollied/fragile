@@ -45,6 +45,7 @@ class Environment(BaseEnvironment):
             "states": {"size": self.states_shape, "dtype": dtype.float64},
             "observs": {"size": self.observs_shape, "dtype": dtype.float32},
             "rewards": {"dtype": dtype.float32},
+            "times": {"dtype": dtype.float32},
             "oobs": {"dtype": dtype.bool},
             "terminals": {"dtype": dtype.bool},
         }
@@ -178,8 +179,14 @@ class DiscreteEnv(Environment):
         observs = tensor(observs)
         states = tensor(states)
         rewards = tensor.zeros(batch_size, dtype=dtype.float32)
+        times = tensor.zeros_like(rewards)
         oobs = tensor.zeros(batch_size, dtype=dtype.bool)
         new_states = self.states_from_data(
-            batch_size=batch_size, states=states, observs=observs, rewards=rewards, oobs=oobs
+            batch_size=batch_size,
+            states=states,
+            observs=observs,
+            rewards=rewards,
+            oobs=oobs,
+            times=times,
         )
         return new_states

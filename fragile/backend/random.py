@@ -13,6 +13,7 @@ class MetaTorchRandomState(type):
 
 class TorchRandomState(metaclass=MetaTorchRandomState):
     def __init__(self, seed: typing.Scalar):
+        numpy.random.seed(seed)
         torch.random.manual_seed(int(seed))
 
     def __getattr__(self, item):

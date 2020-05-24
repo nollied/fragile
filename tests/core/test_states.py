@@ -1,6 +1,6 @@
 import pytest  # noqa: F401
 
-from fragile.backend import Backend, dtype, functions as F, tensor
+from fragile.backend import Backend, dtype, tensor
 
 from fragile.core.states import States, StatesEnv, StatesModel, StatesWalkers
 
@@ -67,24 +67,24 @@ class TestStates:
         for s in new_states.split_states(batch_size):
             assert len(s) == 1
             assert s.test == "test"
-        data = F.repeat(tensor.arange(5).reshape(1, -1), batch_size, 0)
+        data = tensor.repeat(tensor.arange(5).reshape(1, -1), batch_size, 0)
         new_states = states_class(batch_size=batch_size, test="test", data=data)
         for s in new_states.split_states(batch_size):
             assert len(s) == 1
             assert s.test == "test"
             assert bool((s.data == tensor.arange(5)).all()), s.data
         chunk_len = 4
-        test_data = F.repeat(tensor.arange(5).reshape(1, -1), chunk_len, 0)
+        test_data = tensor.repeat(tensor.arange(5).reshape(1, -1), chunk_len, 0)
         for s in new_states.split_states(5):
             assert len(s) == chunk_len
             assert s.test == "test"
             assert (s.data == test_data).all(), (s.data.shape, test_data.shape)
 
         batch_size = 21
-        data = F.repeat(tensor.arange(5).reshape(1, -1), batch_size, 0)
+        data = tensor.repeat(tensor.arange(5).reshape(1, -1), batch_size, 0)
         new_states = states_class(batch_size=batch_size, test="test", data=data)
         chunk_len = 5
-        test_data = F.repeat(tensor.arange(5).reshape(1, -1), chunk_len, 0)
+        test_data = tensor.repeat(tensor.arange(5).reshape(1, -1), chunk_len, 0)
         split_states = list(new_states.split_states(5))
         for s in split_states[:-1]:
             assert len(s) == chunk_len
@@ -126,7 +126,7 @@ class TestStates:
     @pytest.mark.parametrize("states_class", state_classes)
     def test_merge_states(self, states_class):
         batch_size = 21
-        data = F.repeat(tensor.arange(5).reshape(1, -1), batch_size, 0)
+        data = tensor.repeat(tensor.arange(5).reshape(1, -1), batch_size, 0)
         new_states = states_class(batch_size=batch_size, test="test", data=data)
         split_states = tuple(new_states.split_states(batch_size))
         merged = new_states.merge_states(split_states)
@@ -146,5 +146,5 @@ class TestStates:
             split_states = tuple(states.split_states(states.n))
             merged = states.merge_states(split_states)
             assert len(merged) == states.n
-            if Backend.is_numpy():  # Pytorch hashes are not real hashes
+            if Backend.is_numpy() and Backend.use_true_hash():  # Pytorch hashes are not real hashes
                 assert hash(merged) == hash(states)

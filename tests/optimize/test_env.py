@@ -28,7 +28,7 @@ def local_minimizer():
 def custom_domain_function():
     bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
     env = Function(
-        function=sphere, bounds=bounds, custom_domain_check=lambda x: functions.norm(x, 1) < 5.0
+        function=sphere, bounds=bounds, custom_domain_check=lambda x: tensor.norm(x, 1) < 5.0
     )
     return env
 

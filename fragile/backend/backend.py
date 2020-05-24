@@ -70,9 +70,18 @@ def _use_backend(cls, name, device=None, use_grad=None):
         cls.set_backend(**curr_state)
 
 
+_backend, _device, _use_grad, _true_hash = load_backend_config()
+_backend, _device, _use_grad, _true_hash = (
+    str(_backend),
+    str(_device),
+    bool(_use_grad),
+    bool(_true_hash),
+)
+
+
 class Backend:
     AVAILABLE_BACKENDS = ["numpy", "torch"]
-    _backend, _device, _use_grad, _true_hash = load_backend_config()
+    _backend, _device, _use_grad, _true_hash = _backend, _device, _use_grad, _true_hash
 
     @classmethod
     def _check_valid_backend(cls, name):
@@ -107,10 +116,19 @@ class Backend:
         return cls._true_hash
 
     @classmethod
-    def set_defaults(cls, name=None, device=None, use_grad: bool = None, set_backend: bool = True):
-        update_backend_config(backend=name, device=device, use_grad=use_grad)
+    def set_defaults(
+        cls,
+        name=None,
+        device=None,
+        use_grad: bool = None,
+        set_backend: bool = True,
+        true_hash: bool = None,
+    ):
+        update_backend_config(backend=name, device=device, use_grad=use_grad, true_hash=true_hash)
         if set_backend:
             cls.set_backend(name, device, use_grad)
+            if true_hash is not None:
+                cls._true_hash = true_hash
 
     @classmethod
     def set_backend(cls, name=None, device=None, use_grad: bool = None):

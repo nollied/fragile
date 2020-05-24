@@ -112,15 +112,15 @@ class TestSwarm:
         swarm.reset(root_walker=root_walker)
         swarm_best_id = swarm.best_id
         root_walker_id = root_walker.id_walkers
-        assert (swarm.best_obs == obs).all()
         assert (swarm.best_state == state).all()
+        assert (swarm.best_obs == obs).all(), (obs, tensor(swarm.best_obs))
         assert swarm.best_reward == reward
         assert (swarm.walkers.env_states.observs == obs).all()
         assert (swarm.walkers.env_states.states == state).all()
         assert (swarm.walkers.env_states.rewards == reward).all()
         if Backend.is_numpy():
             assert (swarm.walkers.states.id_walkers == root_walker.id_walkers).all()
-            assert swarm_best_id == root_walker_id
+            assert swarm_best_id == root_walker_id[0]
 
     def test_step_does_not_crashes(self, swarm):
         swarm.reset()
