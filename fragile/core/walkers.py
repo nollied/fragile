@@ -331,9 +331,9 @@ class SimpleWalkers(BaseWalkers):
                 self._accumulate_and_update_rewards(kwargs["rewards"])
                 del kwargs["rewards"]
             self.states.update(**kwargs)
-        if model_states is not None and self.model_states.get("dt") is not None:
-            times = self.model_states.get("dt") + self.env_states.get("times")
-            self.states.update(times=times)
+        dt = self.model_states.get("dt", 1.) if model_states is not None else 1.
+        times = self.env_states.get("times") + dt
+        self.env_states.update(times=times)
         if isinstance(env_states, StatesEnv):
             self._env_states.update(env_states)
             if hasattr(env_states, "rewards"):
