@@ -631,7 +631,7 @@ class StepSwarm(Swarm):
 
     def step_root_state(self):
         """Make the state transition of the root state."""
-        best_ix = self.walkers.get_best_index()# if self.step_after_improvement else None
+        best_ix = self.walkers.get_best_index()  # if self.step_after_improvement else None
         if self._should_step_root_state(best_ix):
             model_states = self.root_model.predict(
                 root_env_states=self.root_env_states, walkers=self.walkers
@@ -656,9 +656,7 @@ class StepSwarm(Swarm):
         times = dt + self.root_walker.times
         root_id = tensor(self.walkers.states.id_walkers[best_ix])
         self.root_walkers_states.update(
-            cum_rewards=cum_rewards,
-            times=times,
-            id_walkers=tensor([root_id]),
+            cum_rewards=cum_rewards, times=times, id_walkers=tensor([root_id]),
         )
 
         self.root_walker = OneWalker(
@@ -711,9 +709,7 @@ class StepToBest(StepSwarm):
         times = self.root_walkers_states.times + self.root_walker.times
         root_id = tensor(self.walkers.states.id_walkers[best_ix])
         self.root_walkers_states.update(
-            cum_rewards=cum_rewards,
-            id_walkers=tensor([root_id]),
-            times=times,
+            cum_rewards=cum_rewards, id_walkers=tensor([root_id]), times=times,
         )
         self.root_walker = OneWalker(
             reward=tensor.copy(cum_rewards[0]),

@@ -7,7 +7,11 @@ import hypothesis.strategies as st
 import numpy
 
 from fragile.backend import Backend, dtype, tensor
-from fragile.core.functions import calculate_clone, calculate_virtual_reward, fai_iteration
+from fragile.backend.functions.fractalai import (
+    calculate_clone,
+    calculate_virtual_reward,
+    fai_iteration,
+)
 from fragile.core.utils import NUMPY_IGNORE_WARNINGS_PARAMS
 
 warnings.filterwarnings("ignore", category=HypothesisDeprecationWarning)
@@ -27,7 +31,7 @@ class TestFaiNumpy:
     def test_calculate_reward(self, observs, rewards, oobs):
         with numpy.errstate(**NUMPY_IGNORE_WARNINGS_PARAMS):
             virtual_reward, compas = calculate_virtual_reward(
-                observs=tensor(observs), rewards=tensor(rewards), oobs=tensor(oobs)
+                observs=tensor(observs), rewards=tensor(rewards), oobs=tensor(oobs), return_compas=True
             )
             assert dtype.is_tensor(virtual_reward)
             assert len(virtual_reward.shape) == 1

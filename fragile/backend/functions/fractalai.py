@@ -1,8 +1,24 @@
 from typing import Callable
 
-# import numpy
+import numpy
 
-from fragile.backend import dtype, random_state, tensor, typing
+from fragile.backend.data_types import dtype, typing
+from fragile.backend.fragile_tensor import tensor
+from fragile.backend.functions.random import random_state
+
+
+AVAILABLE_FUNCTIONS = {
+    "l2_norm",
+    "relativize",
+    "get_alive_indexes",
+    "calculate_virtual_reward",
+    "calculate_clone",
+    "calculate_distance",
+    "fai_iteration",
+    "cross_virtual_reward",
+    "cross_clone",
+    "cross_fai_iteration",
+}
 
 
 def l2_norm(x: typing.Tensor, y: typing.Tensor) -> typing.Tensor:
@@ -18,13 +34,14 @@ def relativize(x: typing.Tensor) -> typing.Tensor:
     if float(std) == 0:
         return tensor.ones(len(x), dtype=orig.dtype)
     standard = (x - x.mean()) / std
-    res = tensor.where(standard > 0.0, tensor.log(1.0 + standard) + 1.0, tensor.exp(standard))
+    with numpy.errstate(invalid="ignore"):
+        res = tensor.where(standard > 0.0, tensor.log(1.0 + standard) + 1.0, tensor.exp(standard))
     # standard[standard > 0] = tensor.log(1.0 + standard[standard > 0]) + 1.0
     # standard[standard <= 0] = tensor.exp(standard[standard <= 0])
     return res
 
 
-def get_alives_indexes(oobs: typing.Tensor):
+def get_alive_indexes(oobs: typing.Tensor):
     """Get indexes representing random alive walkers given a vector of death conditions."""
     if tensor.all(oobs):
         return tensor.arange(len(oobs))
@@ -32,6 +49,23 @@ def get_alives_indexes(oobs: typing.Tensor):
     return random_state.choice(
         tensor.arange(len(ix))[ix], size=len(ix), replace=ix.sum() < len(ix)
     )
+
+
+def calculate_distance(
+    observs: typing.Tensor,
+    distance_function: Callable = l2_norm,
+    return_compas: bool = False,
+    oobs: typing.Tensor = None,
+    compas: typing.Tensor = None,
+):
+    """Calculate a distance metric for each walker with respect to a random companion."""
+    if compas is None:
+        compas = get_alive_indexes(oobs) if oobs is not None else tensor.arange(observs.shape[0])
+        compas = random_state.permutation(compas)
+    flattened_observs = observs.view(observs.shape[0], -1)
+    distance = distance_function(flattened_observs, flattened_observs[compas])
+    distance_norm = relativize(distance.flatten())
+    return distance_norm if not return_compas else (distance_norm, compas)
 
 
 def calculate_virtual_reward(
@@ -46,7 +80,8 @@ def calculate_virtual_reward(
 ):
     """Calculate the virtual rewards given the required data."""
 
-    compas = get_alives_indexes(oobs) if oobs is not None else tensor.arange(len(rewards))
+    compas = get_alive_indexes(oobs) if oobs is not None else tensor.arange(len(rewards))
+    compas = random_state.permutation(compas)
     flattened_observs = observs.reshape(len(oobs), -1)
     other_reward = other_reward.flatten() if dtype.is_tensor(other_reward) else other_reward
     distance = distance_function(flattened_observs, flattened_observs[compas])
@@ -54,12 +89,15 @@ def calculate_virtual_reward(
     rewards_norm = relativize(rewards)
 
     virtual_reward = distance_norm ** dist_coef * rewards_norm ** reward_coef * other_reward
-    return virtual_reward.flatten() if not return_compas else virtual_reward.flatten(), compas
+    return virtual_reward.flatten() if not return_compas else (virtual_reward.flatten(), compas)
 
 
-def calculate_clone(virtual_rewards: typing.Tensor, oobs: typing.Tensor, eps=1e-3):
+def calculate_clone(virtual_rewards: typing.Tensor, oobs: typing.Tensor = None, eps=1e-3):
     """Calculate the clone indexes and masks from the virtual rewards."""
-    compas_ix = get_alives_indexes(oobs)
+    compas_ix = (
+        get_alive_indexes(oobs) if oobs is not None else tensor.arange(len(virtual_rewards))
+    )
+    compas_ix = random_state.permutation(compas_ix)
     vir_rew = virtual_rewards.flatten()
     clone_probs = (vir_rew[compas_ix] - vir_rew) / tensor.where(
         vir_rew > eps, vir_rew, tensor(eps)
@@ -78,7 +116,7 @@ def fai_iteration(
     other_reward: typing.Tensor = 1.0,
 ):
     """Perform a FAI iteration."""
-    virtual_reward, vr_compas = calculate_virtual_reward(
+    virtual_reward = calculate_virtual_reward(
         observs,
         rewards,
         oobs,
@@ -132,7 +170,9 @@ def cross_clone(
     compas_ix = random_state.permutation(tensor.arange(len(ext_virtual_rewards)))
     host_vr = tensor.astype(host_virtual_rewards.flatten(), dtype=dtype.float32)
     ext_vr = tensor.astype(ext_virtual_rewards.flatten(), dtype=dtype.float32)
-    clone_probs = (ext_vr[compas_ix] - host_vr) / tensor.where(ext_vr > eps, ext_vr, tensor(eps, dtype=dtype.float32))
+    clone_probs = (ext_vr[compas_ix] - host_vr) / tensor.where(
+        ext_vr > eps, ext_vr, tensor(eps, dtype=dtype.float32)
+    )
     will_clone = clone_probs.flatten() > random_state.random(len(clone_probs))
     if host_oobs is not None:
         will_clone[host_oobs] = True

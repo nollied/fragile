@@ -8,8 +8,8 @@ import numpy
 import pandas
 
 from fragile.backend import tensor
+from fragile.backend.functions.fractalai import relativize
 from fragile.core.bounds import Bounds
-from fragile.core.functions import relativize
 from fragile.core.swarm import Swarm
 from fragile.core.utils import get_plangym_env
 from fragile.dataviz.streaming import Curve, Histogram, Landscape2D, RGB, Table

@@ -92,7 +92,9 @@ class States:
 
     def _ix(self, index: int):
         # TODO(guillemdb): Allow slicing
-        data = {k: tensor.unsqueeze(v[index], 0) if dtype.is_tensor(v) else v for k, v in self.items()}
+        data = {
+            k: tensor.unsqueeze(v[index], 0) if dtype.is_tensor(v) else v for k, v in self.items()
+        }
         return self.__class__(batch_size=1, **data)
 
     def __setitem__(self, key, value: Union[Tuple, List, typing.Tensor]):
@@ -649,7 +651,9 @@ class OneWalker(States):
         self.rewards[:] = tensor.copy(reward) if dtype.is_tensor(reward) else copy.deepcopy(reward)
         self.times[:] = tensor.copy(time) if dtype.is_tensor(time) else copy.deepcopy(time)
         self.id_walkers[:] = (
-            tensor.copy(id_walker.squeeze()) if id_walker is not None else hasher.hash_tensor(state)
+            tensor.copy(id_walker.squeeze())
+            if id_walker is not None
+            else hasher.hash_tensor(state)
         )
         self.update(**kwargs)
 

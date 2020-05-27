@@ -146,5 +146,7 @@ class TestStates:
             split_states = tuple(states.split_states(states.n))
             merged = states.merge_states(split_states)
             assert len(merged) == states.n
-            if Backend.is_numpy() and Backend.use_true_hash():  # Pytorch hashes are not real hashes
+            if (
+                Backend.is_numpy() and Backend.use_true_hash()
+            ):  # Pytorch hashes are not real hashes
                 assert hash(merged) == hash(states)

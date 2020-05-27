@@ -9,7 +9,7 @@ class Hasher:
 
     _true_hash = bool(Backend.use_true_hash())
 
-    def __init__(self, seed: int=0):
+    def __init__(self, seed: int = 0):
         self._seed = seed
 
     @staticmethod

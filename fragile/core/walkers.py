@@ -3,8 +3,8 @@ from typing import Any, Callable, Dict, Optional, Set, Tuple
 import numpy
 
 from fragile.backend import dtype, tensor, typing
+from fragile.backend.functions.fractalai import relativize
 from fragile.core.base_classes import BaseCritic, BaseWalkers
-from fragile.core.functions import relativize
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 from fragile.core.utils import statistics_from_array
 
@@ -268,14 +268,14 @@ class SimpleWalkers(BaseWalkers):
             one contains the ids of the states after the cloning process.
 
         """
-        #old_ids = set(numpy.unique(tensor.to_numpy(self.states.id_walkers)))
+        # old_ids = set(numpy.unique(tensor.to_numpy(self.states.id_walkers)))
         self.states.in_bounds = tensor.logical_not(self.env_states.oobs)
         self.calculate_distances()
         self.calculate_virtual_reward()
         self.update_clone_probs()
         self.clone_walkers()
-        #new_ids = set(numpy.unique(tensor.to_numpy(self.states.id_walkers)))
-        return None, None#old_ids, new_ids
+        # new_ids = set(numpy.unique(tensor.to_numpy(self.states.id_walkers)))
+        return None, None  # old_ids, new_ids
 
     def clone_walkers(self) -> None:
         """
@@ -310,6 +310,7 @@ class SimpleWalkers(BaseWalkers):
             self.states.update(walkers_states)
         else:
             self.states.reset()
+        self.env_states.times[:] = -1.0
         self.update_states(env_states=env_states, model_states=model_states)
         self._epoch = 0
 
@@ -331,11 +332,11 @@ class SimpleWalkers(BaseWalkers):
                 self._accumulate_and_update_rewards(kwargs["rewards"])
                 del kwargs["rewards"]
             self.states.update(**kwargs)
-        dt = self.model_states.get("dt", 1.) if model_states is not None else 1.
-        times = self.env_states.get("times") + dt
-        self.env_states.update(times=times)
         if isinstance(env_states, StatesEnv):
+            dt = model_states.get("dt", 1.0) if model_states is not None else 1.0
+            times = self._env_states.get("times") + dt
             self._env_states.update(env_states)
+            self._env_states.update(times=times)
             if hasattr(env_states, "rewards"):
                 self._accumulate_and_update_rewards(env_states.rewards)
         if isinstance(model_states, StatesModel):
@@ -351,7 +352,7 @@ class SimpleWalkers(BaseWalkers):
             rewards: Array containing the last rewards received by every walker.
         """
         if self._accumulate_rewards:
-            if not dtype.is_tensor(self.states.get("cum_rewards")):
+            if self.states.get("cum_rewards") is None:
                 cum_rewards = tensor.zeros(rewards.shape[0])
             else:
                 cum_rewards = self.states.cum_rewards
@@ -403,6 +404,7 @@ class Walkers(SimpleWalkers):
         critic: Optional[BaseCritic] = None,
         minimize: bool = False,
         reward_limit: float = None,
+        fix_best: bool = True,
         **kwargs
     ):
         """
@@ -442,6 +444,8 @@ class Walkers(SimpleWalkers):
                           it will be considered the minimum reward possible, and \
                           if you are maximizing a reward it will be the maximum \
                           value.
+            fix_best: If ``True`` Override the last walker of the Swarm with the \
+                      best walker at the beginning of each epoch.
             kwargs: Additional attributes stored in the :class:`StatesWalkers`.
 
         """
@@ -473,6 +477,7 @@ class Walkers(SimpleWalkers):
         if reward_limit is None:
             reward_limit = numpy.NINF if self.minimize else numpy.inf
         self.reward_limit = reward_limit
+        self.clone_to_best = fix_best
 
     def __repr__(self):
         text = "\nBest reward found: {:.4f} , efficiency {:.3f}, Critic: {}\n".format(
@@ -574,7 +579,7 @@ class Walkers(SimpleWalkers):
     def fix_best(self):
         """Ensure the best state found is assigned to the last walker of the \
         swarm, so walkers can always choose to clone to the best state."""
-        if self.states.best_reward is not None:
+        if self.states.best_reward is not None and self.clone_to_best:
             self.env_states.observs[-1] = self.states.best_obs
             self.states.cum_rewards[-1] = float(self.states.best_reward)
             self.states.id_walkers[-1] = self.states.best_id
@@ -609,6 +614,7 @@ class Walkers(SimpleWalkers):
             best_reward=self.env_states.rewards[best_ix],
             best_obs=self.env_states.observs[best_ix],
             best_state=self.env_states.states[best_ix],
+            best_time=self.env_states.times[best_ix],
             best_id=self.states.id_walkers[best_ix],
         )
         if self.critic is not None:

@@ -245,6 +245,8 @@ class NetworkxTree(BaseTree):
         """
         # Don't add any leaf that creates a cycle in the graph
         if leaf_id not in self.data.nodes:
+            # if parent_id not in self.data.nodes:
+            #    raise ValueError("Parent not in graph")
             self.data.add_node(leaf_id, epoch=epoch, **node_data)
             self.data.add_edge(parent_id, leaf_id, **edge_data)
             self.leafs.add(leaf_id)

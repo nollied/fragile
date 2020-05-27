@@ -6,8 +6,8 @@ from hypothesis.extra.numpy import arrays
 import numpy
 import pytest
 
-from fragile.backend import Backend, dtype, tensor
-from fragile.core.functions import relativize
+from fragile.backend import dtype, tensor
+from fragile.backend.functions.fractalai import relativize
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 from fragile.core.utils import NUMPY_IGNORE_WARNINGS_PARAMS
 from fragile.core.walkers import Walkers
@@ -160,7 +160,9 @@ class TestWalkers:
 
     def test_update_clone_probs(self, walkers):
         walkers.reset()
-        walkers.states.update(virtual_rewards=relativize(tensor.arange(walkers.n, dtype=dtype.float32)))
+        walkers.states.update(
+            virtual_rewards=relativize(tensor.arange(walkers.n, dtype=dtype.float32))
+        )
         walkers.update_clone_probs()
         assert 0 < tensor.sum(walkers.states.clone_probs == walkers.states.clone_probs[0]), (
             walkers.states.virtual_rewards,

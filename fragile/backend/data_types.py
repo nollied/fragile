@@ -90,12 +90,13 @@ class dtype(metaclass=MetaScalar):
     @classmethod
     def is_tensor(cls, x):
         from fragile.backend.fragile_tensor import tensor
+
         return isinstance(x, tensor.type)  # or cls.is_hash_tensor(x)
 
     @classmethod
     def to_node_id(cls, x):
         if Backend.is_numpy():
-            return str(x) if Backend.use_true_hash() else int
+            return str(x) if Backend.use_true_hash() else int(x)
         elif Backend.is_torch():
             return int(x)
 
@@ -134,4 +135,3 @@ class typing(metaclass=MetaTyping):
     Tensor = Union[numpy.ndarray, torch.Tensor]
     StateDict = Dict[str, Dict[str, Any]]
     DistanceFunction = Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray]
-

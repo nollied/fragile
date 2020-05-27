@@ -6,9 +6,7 @@ from fragile.backend.data_types import dtype
 
 def _new_torch_tensor(x, use_grad, device, *args, **kwargs):
     try:
-        new_tensor = torch.tensor(
-            x, *args, requires_grad=use_grad, device=device, **kwargs,
-        )
+        new_tensor = torch.tensor(x, *args, requires_grad=use_grad, device=device, **kwargs,)
     except Exception as e:
         new_tensor = torch.tensor(x, *args, requires_grad=False, device=device, **kwargs)
     return new_tensor
@@ -51,7 +49,6 @@ class MetaTensor(type):
 
 
 class tensor(metaclass=MetaTensor):
-
     def __new__(cls, x, requires_grad: bool = None, device: str = None, *args, **kwargs):
         return cls.to_backend(x, use_grad=requires_grad, device=device)
 
