@@ -380,13 +380,14 @@ class ContinuousModel(_DtModel):
             bounds: :class:`Bounds` class defining the range of allowed output \
             values of the model.
             critic: :class:`Critic` that will be used to make additional computation.
+            env: Environment used to infer the bounds of the model.
             **kwargs: Ignored. Only defined to march :class:`Model` interface.
 
         """
         try:
             bounds = bounds if bounds is not None else env.bounds
         except Exception:
-            raise ValueError("If bounds is None and env.bounds is not available.")
+            raise ValueError("bounds is None and env.bounds is not available.")
         super(ContinuousModel, self).__init__(critic=critic)
         self.bounds = bounds
 

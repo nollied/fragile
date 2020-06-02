@@ -123,7 +123,7 @@ class Bounds:
         for lo, hi in bounds:
             low.append(lo)
             high.append(hi)
-        low, high = tensor(low), tensor(high)
+        low, high = tensor(low, dtype=_dtype.float), tensor(high, dtype=_dtype.float)
         return Bounds(low=low, high=high)
 
     @staticmethod

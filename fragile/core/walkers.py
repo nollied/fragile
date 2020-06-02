@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 import numpy
 
-from fragile.backend import dtype, tensor, typing
+from fragile.backend import dtype, hasher, tensor, typing
 from fragile.backend.functions.fractalai import relativize
 from fragile.core.base_classes import BaseCritic, BaseWalkers
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
@@ -127,7 +127,8 @@ class SimpleWalkers(BaseWalkers):
 
     def update_ids(self):
         """Update the unique id of each walker and store it in the :class:`StatesWalkers`."""
-        self.states.update(id_walkers=self.ids())
+        if hasher.uses_true_hash:
+            self.states.update(id_walkers=self.ids())
 
     @property
     def states(self) -> StatesWalkers:
@@ -311,7 +312,9 @@ class SimpleWalkers(BaseWalkers):
         else:
             self.states.reset()
         self.env_states.times[:] = -1.0
+        old_ids = tensor.copy(self.states.id_walkers)
         self.update_states(env_states=env_states, model_states=model_states)
+        self.states.id_walkers = old_ids
         self._epoch = 0
 
     def update_states(
@@ -364,8 +367,12 @@ class SimpleWalkers(BaseWalkers):
     @staticmethod
     def _repr_state(state):
         string = "\n"
+        skip_print = {"observs", "states", "id_walkers", "best_id"}
+
         for k, v in state.items():
-            if k in ["observs", "states", "id_walkers", "best_id"]:
+            if k in skip_print:
+                continue
+            elif k == "best_state" and (v.dtype == "O" or v.dtype.startswith("S")):
                 continue
             shape = v.shape if hasattr(v, "shape") else None
             new_str = (
@@ -437,8 +444,6 @@ class Walkers(SimpleWalkers):
             critic: :class:`Critic` that will be used to calculate custom rewards.
             minimize: If ``True`` the algorithm will perform a minimization \
                       process. If ``False`` it will be a maximization process.
-            best_walker: Tuple containing the best state and reward that will \
-                        be used as the initial best values found.
             reward_limit: The algorithm run will stop after reaching this \
                           reward value. If you are running a minimization process \
                           it will be considered the minimum reward possible, and \

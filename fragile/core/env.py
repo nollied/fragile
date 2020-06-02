@@ -14,21 +14,31 @@ class Environment(BaseEnvironment):
     following the :class:`BaseEnvironment` interface.
     """
 
-    def __init__(self, states_shape: tuple, observs_shape: tuple):
+    def __init__(
+        self, states_shape: tuple, observs_shape: tuple, states_dtype: type = dtype.float64
+    ):
         """
         Initialize an :class:`Environment`.
 
         Args:
-            states_shape: Shape of the internal state of the :class:`Environment`
+            states_shape: Shape of the internal state of the :class:`Environment`.
             observs_shape: Shape of the observations state of the :class:`Environment`.
+            states_dtype: Type of the internal state of the :class:`Environment`.
+
         """
         self._states_shape = states_shape
         self._observs_shape = observs_shape
+        self._states_dtype = states_dtype
 
     @property
     def states_shape(self) -> tuple:
         """Return the shape of the internal state of the :class:`Environment`."""
         return self._states_shape
+
+    @property
+    def states_dtype(self) -> type:
+        """Return the shape of the internal state of the :class:`Environment`."""
+        return self._states_dtype
 
     @property
     def observs_shape(self) -> tuple:
@@ -42,7 +52,7 @@ class Environment(BaseEnvironment):
         :class:`Environment`.
         """
         params = {
-            "states": {"size": self.states_shape, "dtype": dtype.float64},
+            "states": {"size": self.states_shape, "dtype": self._states_dtype},
             "observs": {"size": self.observs_shape, "dtype": dtype.float32},
             "rewards": {"dtype": dtype.float32},
             "times": {"dtype": dtype.float32},
@@ -84,18 +94,21 @@ class DiscreteEnv(Environment):
     follows the interface of `plangym`.
     """
 
-    def __init__(self, env: "plangym.core.GymEnvironment"):
+    def __init__(self, env: "plangym.core.GymEnvironment", states_dtype: type = dtype.float64):
         """
         Initialize a :class:`DiscreteEnv`.
 
         Args:
            env: Instance of :class:`plangym.Environment`.
+           states_dtype: Type of the internal state of the :class:`Environment`.
+
         """
         self._env = env
         self._n_actions = self._env.action_space.n
         super(DiscreteEnv, self).__init__(
             states_shape=self._env.get_state().shape,
             observs_shape=self._env.observation_space.shape,
+            states_dtype=states_dtype,
         )
 
     @property

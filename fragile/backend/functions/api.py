@@ -1,5 +1,6 @@
-from fragile.backend.backend import Backend
 from fragile.backend import functions
+from fragile.backend.backend import Backend
+
 
 AVAILABLE_FUNCTIONS = [
     "argmax",

@@ -3,7 +3,7 @@ from typing import Any, Callable, List, Tuple
 
 import numpy
 
-from fragile.backend import Backend, dtype, hasher, tensor, typing
+from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core import Environment, Swarm, SwarmWrapper, Walkers
 from fragile.core.base_classes import BaseModel, BaseTree
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers

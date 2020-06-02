@@ -31,7 +31,6 @@ def stack(x, axis=0, out=None):
 
 
 def clip(x, a_min, a_max, out=None):
-    from fragile.backend.fragile_tensor import tensor
 
     _tensor = min(x, other=tensor.astype(tensor(a_max), dtype=x.dtype))
     return max(_tensor, other=tensor.astype(tensor(a_min), dtype=x.dtype), out=out)
@@ -60,7 +59,7 @@ def repeat(x, repeat, axis=None):
 
 
 def tile(x, repeat):
-    return torch.Tensor.repeat(x, *repeat if isinstance(repeat, tuple) else repeat)
+    return torch.Tensor.repeat(x, *repeat if isinstance(repeat, tuple) else [repeat])
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -93,7 +92,7 @@ def where(cond, a, b, *args, **kwargs):
         a = a.to(dtype.int32)
         was_bool = True
     if b.dtype == dtype.bool:
-        _b = b.to(dtype.int32)
+        b = b.to(dtype.int32)
         was_bool = True
     res = torch.where(cond, a, b)
     return res.to(dtype.bool) if was_bool else res

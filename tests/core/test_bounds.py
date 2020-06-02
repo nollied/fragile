@@ -169,8 +169,11 @@ class TestBounds:
         array = tensor([[-10, 0, 0], [11, 0, 0], [0, 11, 0], [11, 11, 11]], dtype=dtype.float)
         bounds = Bounds.from_tuples(tup)
         clipped = bounds.clip(array)
-        target = tensor([[-1, 0, 2], [10, 0, 2], [0, 4, 2], [10, 4, 5]], dtype=dtype.float)
-        assert tensor.allclose(clipped, target), (clipped, target)
+        target = tensor(
+            [[-1.0, 0.0, 2.0], [10.0, 0.0, 2.0], [0.0, 4.0, 2], [10, 4, 5]], dtype=dtype.float
+        )
+        print("dtypes", clipped.dtype, target.dtype)
+        assert tensor.allclose(clipped, target), (clipped.dtype, target.dtype)
 
     @pytest.mark.parametrize("bounds_fixture", bounds_fixture_params, indirect=True)
     def test_to_tuples(self, bounds_fixture):
