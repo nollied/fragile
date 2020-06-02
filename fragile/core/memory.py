@@ -1,7 +1,7 @@
 import logging
 from typing import Iterable, List, Tuple, Union
 
-from fragile.backend import dtype, typing
+from fragile.backend import dtype, tensor, typing
 from fragile.core.swarm import Swarm
 
 
@@ -84,7 +84,9 @@ class ReplayMemory:
             if dtype.is_tensor(val) and len(val.shape) == 1:
                 val = val.reshape(-1, 1)
             processed = (
-                val if getattr(self, name) is None else F.concatenate([val, getattr(self, name)])
+                val
+                if getattr(self, name) is None
+                else tensor.concatenate([val, getattr(self, name)])
             )
             if len(processed) > self.max_size:
                 processed = processed[: self.max_size]

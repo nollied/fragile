@@ -3,8 +3,8 @@ from typing import Tuple
 
 import numpy
 
-from fragile.backend.functions.fractalai import cross_fai_iteration
 from fragile.backend import dtype, random_state, tensor, typing
+from fragile.backend.functions.fractalai import cross_fai_iteration
 from fragile.core import SwarmWrapper
 from fragile.core.states import States
 from fragile.core.swarm import Swarm

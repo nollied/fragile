@@ -50,7 +50,7 @@ class MetaTensor(type):
 
 class tensor(metaclass=MetaTensor):
     def __new__(cls, x, requires_grad: bool = None, device: str = None, *args, **kwargs):
-        return cls.to_backend(x, use_grad=requires_grad, device=device)
+        return cls.to_backend(x, use_grad=requires_grad, device=device, *args, **kwargs)
 
     @classmethod
     def copy(cls, x, requires_grad: bool = None, device=None):
@@ -90,16 +90,21 @@ class tensor(metaclass=MetaTensor):
         return Backend.execute(x, funcs)
 
     @staticmethod
-    def to_numpy(x):
+    def to_numpy(x, *args, **kwargs):
         try:
             if isinstance(x, numpy.ndarray):
                 return x
             elif isinstance(x, torch.Tensor):
                 return x.cpu().detach().numpy()
             else:
-                return numpy.asarray(x)
+                return numpy.asarray(x, *args, **kwargs)
         except Exception:
-            return numpy.asarray(x)
+            try:
+                return numpy.array(x, *args, **kwargs)
+            except Exception as e:
+                # if isinstance(x, list):
+                #    return numpy.array(x, dtype=object)
+                return numpy.array(tuple(x), dtype=object)
 
     @classmethod
     def to_torch(
@@ -121,7 +126,7 @@ class tensor(metaclass=MetaTensor):
         elif not isinstance(x, torch.Tensor):
             if not copy:
                 try:
-                    return cls.as_tensor(x)
+                    return cls.as_tensor(x, *args, **kwargs)
                 except Exception:
                     x = _new_torch_tensor(x, use_grad, device, *args, **kwargs)
             else:
@@ -130,7 +135,9 @@ class tensor(metaclass=MetaTensor):
         return x
 
     @classmethod
-    def to_backend(cls, x: "typing.Tensor", use_grad: bool = None, device: str = None):
+    def to_backend(
+        cls, x: "typing.Tensor", use_grad: bool = None, device: str = None, *args, **kwargs
+    ):
         if Backend.is_numpy():
-            return cls.to_numpy(x)
-        return cls.to_torch(x, use_grad=use_grad, device=device)
+            return cls.to_numpy(x, *args, **kwargs)
+        return cls.to_torch(x, use_grad=use_grad, device=device, *args, **kwargs)

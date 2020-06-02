@@ -5,7 +5,7 @@ import networkx as nx
 
 # import numpy
 
-from fragile.backend import Backend, dtype, random_state, tensor, typing
+from fragile.backend import Backend, dtype, hasher, random_state, tensor, typing
 from fragile.core.base_classes import BaseTree
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 
@@ -148,7 +148,10 @@ class NetworkxTree(BaseTree):
             None
 
         """
-        leaf_ids = tensor.to_numpy(walkers_states.get("id_walkers"))
+        if hasher.uses_true_hash:
+            leaf_ids = tensor.to_numpy(walkers_states.get("id_walkers"))
+        else:
+            leaf_ids = hasher.get_array_of_ids(len(walkers_states))
         parent_ids = tensor.to_numpy(parent_ids)
         # Keep track of nodes that are active to make sure that they are not pruned
         self.last_added = set(leaf_ids) | set(parent_ids)
@@ -166,6 +169,8 @@ class NetworkxTree(BaseTree):
                 edge_data=edge_data,
                 epoch=n_iter,
             )
+        if not hasher.uses_true_hash:
+            walkers_states.update(id_walkers=leaf_ids)
 
     def prune_tree(self, alive_leafs: Set[int]):
         """
@@ -245,8 +250,8 @@ class NetworkxTree(BaseTree):
         """
         # Don't add any leaf that creates a cycle in the graph
         if leaf_id not in self.data.nodes:
-            # if parent_id not in self.data.nodes:
-            #    raise ValueError("Parent not in graph")
+            if parent_id not in self.data.nodes:
+                raise ValueError("Parent not in graph")
             self.data.add_node(leaf_id, epoch=epoch, **node_data)
             self.data.add_edge(parent_id, leaf_id, **edge_data)
             self.leafs.add(leaf_id)

@@ -270,7 +270,11 @@ class _BatchEnv:
     def _merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
         kwargs = {}
         for k in data_dicts[0].keys():
-            grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
+            try:
+                grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
+            except Exception as e:
+                val = str([ddict[k].shape for ddict in data_dicts])
+                raise ValueError(val)
             kwargs[k] = grouped
         return kwargs
 

@@ -1,3 +1,5 @@
+from multiprocessing.pool import Pool
+
 import numpy
 import xxhash
 
@@ -11,10 +13,17 @@ class Hasher:
 
     def __init__(self, seed: int = 0):
         self._seed = seed
+        if self._true_hash:
+            self.pool = Pool()
+
+    @property
+    def uses_true_hash(self) -> bool:
+        return self._true_hash
 
     @staticmethod
     def hash_numpy(x: numpy.ndarray) -> int:
         """Return a value that uniquely identifies a numpy array."""
+        x = x.astype("|S576") if x.dtype == "O" else x
         return xxhash.xxh64_hexdigest(x.tobytes())
 
     @staticmethod
@@ -42,10 +51,11 @@ class Hasher:
     def hash_tensor(self, x):
         if self._true_hash:
             return self.true_hash_tensor(x)
-        return self.get_one_id()
+        return 0
 
     def hash_walkers(self, x):
         if self._true_hash:
+            # hashes = self.pool.map(self.true_hash_tensor, x)
             hashes = [self.true_hash_tensor(x_i) for x_i in x]
             return tensor.as_tensor(hashes)
         return self.get_array_of_ids(x.shape[0])
@@ -61,7 +71,7 @@ class Hasher:
                 )
             )
             return _hash
-        return self.get_one_id()
+        return 0
 
 
 hasher = Hasher()

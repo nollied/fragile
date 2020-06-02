@@ -31,7 +31,10 @@ class TestFaiNumpy:
     def test_calculate_reward(self, observs, rewards, oobs):
         with numpy.errstate(**NUMPY_IGNORE_WARNINGS_PARAMS):
             virtual_reward, compas = calculate_virtual_reward(
-                observs=tensor(observs), rewards=tensor(rewards), oobs=tensor(oobs), return_compas=True
+                observs=tensor(observs),
+                rewards=tensor(rewards),
+                oobs=tensor(oobs),
+                return_compas=True,
             )
             assert dtype.is_tensor(virtual_reward)
             assert len(virtual_reward.shape) == 1
