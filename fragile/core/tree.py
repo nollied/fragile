@@ -26,21 +26,16 @@ class NetworkxTree(BaseTree):
     DEFAULT_NODE_DATA = (
         "states",
         "observs",
-        "rewards",
-        "oobs",
-        "terminals",
-        "cum_rewards",
         "compas_clone",
         "processed_rewards",
         "virtual_rewards",
-        "cum_rewards",
         "distances",
         "clone_probs",
         "will_clone",
-        "in_bounds",
+        "in_bounds",  "dt", "rewards", "oobs", "terminals", "cum_rewards"
     )
 
-    DEFAULT_EDGE_DATA = ("actions", "dt")
+    DEFAULT_EDGE_DATA = ("actions","dt")
 
     def __init__(
         self,
@@ -492,7 +487,8 @@ class HistoryTree(NetworkxTree):
             node_data, edge_data, *next_node_data = data
             if name.startswith(self.next_prefix):
                 true_name = name.replace(self.next_prefix, "")
-                return next_node_data[true_name]
+                #print(next_node_data, true_name)
+                return next_node_data[0][true_name]
             elif name in node_data:
                 return node_data[name]
             elif name in edge_data:
@@ -537,10 +533,11 @@ class HistoryTree(NetworkxTree):
         if names is None:
             return self.names
         for name in names:
-            if name.lstrip(self.next_prefix) not in self.names:
+            name = name.lstrip(self.next_prefix) if name.startswith(self.next_prefix) else name
+            if name not in self.names:
                 raise KeyError(
                     "Data corresponding to name %s "
-                    "not present in self.names %s" % (names, self.names)
+                    "not present in self.names: %s for element %s" % (names, self.names, name.lstrip(self.next_prefix))
                 )
         return names
 

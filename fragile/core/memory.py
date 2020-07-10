@@ -89,7 +89,7 @@ class ReplayMemory:
             processed = (
                 val
                 if getattr(self, name) is None
-                else tensor.concatenate([val, getattr(self, name)])
+                else tensor.concatenate([getattr(self, name), val])
             )
             if len(processed) > self.max_size:
                 processed = processed[: self.max_size]
@@ -122,7 +122,7 @@ class SwarmMemory(ReplayMemory):
                      to max_size.
 
         """
-        super(ReplayMemory, self).__init__(max_size=max_size, min_size=min_size, names=names)
+        super(SwarmMemory, self).__init__(max_size=max_size, min_size=min_size, names=names)
         self.mode = mode
 
     def append_swarm(self, swarm: Swarm):
@@ -133,20 +133,14 @@ class SwarmMemory(ReplayMemory):
         # extract data from the swarm
         if self.mode == "best":
             data = next(swarm.tree.iterate_branch(swarm.best_id, batch_size=-1, names=self.names))
+            self.append(**dict(zip(self.names, data)))
+        elif self.mode == "branches":
+            for node_id in swarm.tree.leafs:
+                data = next(
+                    swarm.tree.iterate_branch(node_id, batch_size=-1, names=self.names))
+                self.append(**dict(zip(self.names, data)))
         else:
             data = next(swarm.tree.iterate_nodes_at_random(batch_size=-1, names=self.names))
-        self.append(**dict(zip(self.names, data)))
+            self.append(**dict(zip(self.names, data)))
         # Concatenate the data to the current memory
-        """for name, val in zip(self.names, data):
-            # Scalar vectors are transformed to columns
-            if dtype.is_tensor(val) and len(val.shape) == 1:
-                val = val.reshape(-1, 1)
-            processed = (
-                val
-                if getattr(self, name) is None
-                else tensor.concatenate([val, getattr(self, name)])
-            )
-            if len(processed) > self.max_size:
-                processed = processed[: self.max_size]
-            setattr(self, name, processed)"""
         self._log.info("Memory now contains %s samples" % len(self))

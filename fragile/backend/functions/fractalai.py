@@ -34,7 +34,7 @@ def relativize(x: typing.Tensor) -> typing.Tensor:
     if float(std) == 0:
         return tensor.ones(len(x), dtype=orig.dtype)
     standard = (x - x.mean()) / std
-    with numpy.errstate(invalid="ignore"):
+    with numpy.errstate(invalid="ignore", divide="ignore"):
         res = tensor.where(standard > 0.0, tensor.log(1.0 + standard) + 1.0, tensor.exp(standard))
     # standard[standard > 0] = tensor.log(1.0 + standard[standard > 0]) + 1.0
     # standard[standard <= 0] = tensor.exp(standard[standard <= 0])

@@ -385,16 +385,16 @@ class ParallelEnv(EnvWrapper):
         """
         self.n_workers = n_workers
         self.blocking = blocking
-        self._distribute_name = distribute if distribute is not None else []
+        self._distribute_names = distribute if distribute is not None else []
         self.parallel_env = _ParallelEnvironment(
             env_callable=env_callable, n_workers=n_workers, blocking=blocking
         )
         super(ParallelEnv, self).__init__(env_callable(), name="_local_env")
 
     def __getattr__(self, item):
-        if item in self._distribute_name:
+        if item in self._distribute_names:
             return lambda **kwargs: self.distribute(item, **kwargs)
-        if isinstance(self._local_env, BaseWrapper):
+        elif isinstance(self._local_env, BaseWrapper):
             return getattr(self._local_env, item)
         return self._local_env.__getattribute__(item)
 
