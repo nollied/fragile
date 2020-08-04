@@ -74,7 +74,11 @@ class Environment(BaseEnvironment):
         )
         rewards = tensor(rewards, dtype=dtype.float32)
         observs = tensor(observs)
-        states = tensor(states)
+        try:
+            states = tensor(states)
+        except Exception as e:
+            print(Backend.get_current_backend())
+            raise e
         state = super(Environment, self).states_from_data(
             batch_size=batch_size,
             states=states,
@@ -104,7 +108,11 @@ class DiscreteEnv(Environment):
 
         """
         self._env = env
-        self._n_actions = self._env.action_space.n
+        self._n_actions = (
+            self._env.action_space.n
+            if hasattr(self._env.action_space, "n")
+            else self._env.action_space.shape[0]
+        )
         super(DiscreteEnv, self).__init__(
             states_shape=self._env.get_state().shape,
             observs_shape=self._env.observation_space.shape,
@@ -189,8 +197,8 @@ class DiscreteEnv(Environment):
             state, obs = self._env.reset()
             states = tensor([state.copy() for _ in range(batch_size)]).copy()
             observs = tensor([obs.copy() for _ in range(batch_size)]).copy().astype(dtype.float32)
-        observs = tensor(observs)
-        states = tensor(states)
+        # observs = tensor(observs)
+        # states = tensor(states)
         rewards = tensor.zeros(batch_size, dtype=dtype.float32)
         times = tensor.zeros_like(rewards)
         oobs = tensor.zeros(batch_size, dtype=dtype.bool)

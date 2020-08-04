@@ -1,5 +1,4 @@
 import atexit
-from functools import partial
 import multiprocessing
 import sys
 import traceback

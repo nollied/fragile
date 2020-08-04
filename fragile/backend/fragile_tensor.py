@@ -111,9 +111,9 @@ class tensor(metaclass=MetaTensor):
         cls, x, use_grad: bool = None, device: str = None, copy: bool = False, *args, **kwargs
     ):
         use_grad = use_grad if use_grad is not None else Backend.use_grad()
-        device = device if device is not None else Backend.get_device()
+        device = device if device is not None else str(Backend.get_device())
         if isinstance(x, torch.Tensor):
-            _assign_device_and_grad(x, device, use_grad)
+            _assign_device_and_grad(x, device=device, use_grad=use_grad)
             return x
 
         if isinstance(x, numpy.ndarray):
@@ -141,3 +141,10 @@ class tensor(metaclass=MetaTensor):
         if Backend.is_numpy():
             return cls.to_numpy(x, *args, **kwargs)
         return cls.to_torch(x, use_grad=use_grad, device=device, *args, **kwargs)
+
+    @classmethod
+    def match_batckend(cls, x, other):
+        if isinstance(x, numpy.ndarray):
+            return tensor.to_numpy(other)
+        elif isinstance(x, torch.Tensor):
+            return torch.tensor(other)

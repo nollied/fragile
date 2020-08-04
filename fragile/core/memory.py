@@ -23,7 +23,7 @@ class ReplayMemory:
 
         """
         self.max_size = max_size
-        self.min_size = max_size if min_size is None else min_size
+        self.min_size = 1.0 if min_size is None else min_size
         self.names = names
         self.reset()
 
@@ -64,6 +64,17 @@ class ReplayMemory:
     def as_dict(self) -> Dict[str, typing.Tensor]:
         return dict(zip(self.names, self.get_values()))
 
+    def iterate_batches(self, batch_size: int, as_dict: bool = True):
+        with Backend.use_backend("numpy"):
+            indexes = random_state.permutation(range(len(self)))
+            for i in range(0, len(self), batch_size):
+                batch_ix = indexes[i : i + batch_size]
+                data = tuple([getattr(self, val)[batch_ix] for val in self.names])
+                if as_dict:
+                    yield dict(zip(self.names, data))
+                else:
+                    yield data
+
     def iterate_values(self, randomize: bool = False) -> Iterable[Tuple[typing.Tensor]]:
         """
         Return a generator that yields a tuple containing the data of each state \
@@ -86,13 +97,17 @@ class ReplayMemory:
                 val = tensor.unsqueeze(val)
             if len(val.shape) == 1:
                 val = val.reshape(-1, 1)
-            processed = (
-                val
-                if getattr(self, name) is None
-                else tensor.concatenate([getattr(self, name), val])
-            )
-            if len(processed) > self.max_size:
-                processed = processed[: self.max_size]
+            try:
+                processed = (
+                    val
+                    if getattr(self, name) is None
+                    else tensor.concatenate([getattr(self, name), val])
+                )
+                if len(processed) > self.max_size:
+                    processed = processed[: self.max_size]
+            except Exception as e:
+                print(name, val.shape, getattr(self, name).shape)
+                raise e
             setattr(self, name, processed)
         self._log.info("Memory now contains %s samples" % len(self))
 
@@ -104,7 +119,7 @@ class SwarmMemory(ReplayMemory):
         self,
         max_size: int,
         names: Union[List[str], Tuple[str]],
-        mode: str = "best",
+        mode: str = "best_leaf",
         min_size: int = None,
     ):
         """
@@ -125,19 +140,23 @@ class SwarmMemory(ReplayMemory):
         super(SwarmMemory, self).__init__(max_size=max_size, min_size=min_size, names=names)
         self.mode = mode
 
-    def append_swarm(self, swarm: Swarm):
+    def append_swarm(self, swarm: Swarm, mode=None):
         """
         Extract the replay data from a :class:`Swarm` and incorporate it to the \
         already saved experiences.
         """
         # extract data from the swarm
-        if self.mode == "best":
+        mode = self.mode if mode is None else mode
+        if mode == "best_state":
             data = next(swarm.tree.iterate_branch(swarm.best_id, batch_size=-1, names=self.names))
             self.append(**dict(zip(self.names, data)))
-        elif self.mode == "branches":
+        elif mode == "best_leaf":
+            best_leaf = swarm.walkers.states.id_walkers[swarm.get("cum_rewards").argmax()]
+            data = next(swarm.tree.iterate_branch(best_leaf, batch_size=-1, names=self.names))
+            self.append(**dict(zip(self.names, data)))
+        elif mode == "branches":
             for node_id in swarm.tree.leafs:
-                data = next(
-                    swarm.tree.iterate_branch(node_id, batch_size=-1, names=self.names))
+                data = next(swarm.tree.iterate_branch(node_id, batch_size=-1, names=self.names))
                 self.append(**dict(zip(self.names, data)))
         else:
             data = next(swarm.tree.iterate_nodes_at_random(batch_size=-1, names=self.names))
