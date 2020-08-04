@@ -484,9 +484,14 @@ class Swarm(BaseSwarm):
 class NoBalance(Swarm):
     """Swarm that does not perform the cloning process."""
 
+    def __init__(self, balance_interval: int = 5, *args, **kwargs):
+        super(NoBalance, self).__init__(*args, **kwargs)
+        self.balance_interval = balance_interval
+
     def balance_and_prune(self):
         """Do noting."""
-        pass
+        if self.epoch % self.balance_interval == 0:
+            super(NoBalance, self).balance_and_prune()
 
     def calculate_end_condition(self):
         """Finish after reaching the maximum number of epochs."""

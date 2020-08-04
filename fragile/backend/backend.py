@@ -106,7 +106,7 @@ class Backend:
 
     @classmethod
     def get_device(cls):
-        return cls._device
+        return str(cls._device)
 
     @classmethod
     def use_grad(cls):
