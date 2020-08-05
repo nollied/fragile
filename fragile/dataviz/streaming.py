@@ -7,7 +7,7 @@ from holoviews.streams import Buffer, Pipe
 import numpy
 from scipy.interpolate import griddata
 
-from fragile.core.utils import Scalar
+from fragile.backend import typing
 
 
 class Plot:
@@ -365,7 +365,7 @@ class Histogram(StreamingPlot):
 
         Args:
             data: Tuple containing (values, bins), xlim. xlim is a tuple \
-                  containing two scalars that represent the limits of the x \
+                  containing two typing.Scalars that represent the limits of the x \
                   axis of the histogram.
 
         Returns:
@@ -410,7 +410,8 @@ class Histogram(StreamingPlot):
     def get_plot_data(
         self, data: numpy.ndarray
     ) -> Tuple[
-        Tuple[numpy.ndarray, numpy.ndarray], Tuple[Union[Scalar, None], Union[Scalar, None]]
+        Tuple[numpy.ndarray, numpy.ndarray],
+        Tuple[Union[typing.Scalar, None], Union[typing.Scalar, None]],
     ]:
         """
         Calculate the histogram of the streamed data.
@@ -420,7 +421,7 @@ class Histogram(StreamingPlot):
 
         Returns:
             Tuple containing (values, bins), xlim. xlim is a tuple \
-                  containing two scalars that represent the limits of the x \
+                  containing two typing.Scalars that represent the limits of the x \
                   axis of the histogram.
 
         """

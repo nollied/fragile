@@ -1,7 +1,9 @@
 from typing import Callable
-import numpy
+
+# import numpy
 import pytest
 
+from fragile.backend import Backend, dtype, functions, tensor
 from fragile.core import Bounds
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.optimize.benchmarks import sphere
@@ -10,23 +12,23 @@ from tests.core.test_env import TestEnvironment
 
 N_WALKERS = 50
 
-
+# Backend.set_backend("numpy")
 def function() -> Function:
     return Function.from_bounds_params(
-        function=sphere, shape=(2,), low=numpy.array([-10, -5]), high=numpy.array([10, 5]),
+        function=sphere, shape=(2,), low=tensor([-10, -5]), high=tensor([10, 5]),
     )
 
 
 def local_minimizer():
-    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=float)
+    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
     env = Function(function=sphere, bounds=bounds)
     return MinimizerWrapper(env)
 
 
 def custom_domain_function():
-    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=float)
+    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
     env = Function(
-        function=sphere, bounds=bounds, custom_domain_check=lambda x: numpy.linalg.norm(x) < 5.0
+        function=sphere, bounds=bounds, custom_domain_check=lambda x: tensor.norm(x, 1) < 5.0
     )
     return env
 
@@ -34,19 +36,19 @@ def custom_domain_function():
 def create_env_and_model_states(name="classic") -> Callable:
     def _function():
         env = function()
-        params = {"actions": {"dtype": numpy.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
     def _local_minimizer():
         env = local_minimizer()
-        params = {"actions": {"dtype": numpy.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
     def _custom_domain_function():
         env = custom_domain_function()
-        params = {"actions": {"dtype": numpy.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
@@ -58,7 +60,7 @@ def create_env_and_model_states(name="classic") -> Callable:
         return _local_minimizer
 
 
-env_fixture_params = ["local_minimizer", "function", "custom_domain_function"]
+env_fixture_params = ["function", "custom_domain_function", "local_minimizer"]
 
 
 @pytest.fixture(params=env_fixture_params, scope="class")
@@ -74,16 +76,21 @@ def env_data(request):
 @pytest.fixture(scope="class")
 def function_env() -> Function:
     return Function.from_bounds_params(
-        function=lambda x: numpy.ones(len(x)),
+        function=lambda x: tensor.ones(len(x)),
         shape=(2,),
-        low=numpy.array([-10, -5]),
-        high=numpy.array([10, 5]),
+        low=tensor([-10, -5]),
+        high=tensor([10, 5]),
     )
 
 
 @pytest.fixture(scope="class")
 def batch_size():
     return N_WALKERS
+
+
+@pytest.fixture(scope="class")
+def states_dim():
+    return 2
 
 
 class TestFunction:
@@ -114,9 +121,9 @@ class TestFunction:
     def test_step(self, function_env, batch_size):
         states = function_env.reset(batch_size=batch_size)
         actions = StatesModel(
-            actions=numpy.zeros(states.observs.shape) * 2,
+            actions=tensor.zeros(states.observs.shape),
             batch_size=batch_size,
-            dt=numpy.ones((1, 2)),
+            dt=tensor.ones((1, 2)),
         )
         new_states: StatesEnv = function_env.step(actions, states)
         assert isinstance(new_states, StatesEnv)
@@ -128,10 +135,11 @@ class TestFunction:
         minim = MinimizerWrapper(env)
         assert minim.shape == env.shape
 
+    @pytest.mark.skipif(not Backend.is_numpy(), reason="only in numpy for now")
     def test_minimizer_step(self):
         minim = local_minimizer()
-        params = {"actions": {"dtype": numpy.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         assert minim.shape == minim.shape
         states = minim.step(model_states=states, env_states=minim.reset(N_WALKERS))
-        assert numpy.allclose(states.rewards.min(), 0)
+        assert tensor.allclose(states.rewards.min(), 0)

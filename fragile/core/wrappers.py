@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Union
 
-import numpy
 
+from fragile.backend import typing
 from fragile.core import (
     BaseCritic,
     BaseWrapper,
@@ -16,14 +16,13 @@ from fragile.core import (
     Walkers,
 )
 from fragile.core.base_classes import BaseTree
-from fragile.core.utils import StateDict
 
 
 class CriticWrapper(BaseWrapper, BaseCritic):
     def __init__(self, critic: BaseCritic, name: str = "_critic"):
         BaseWrapper.__init__(self, critic, name=name)
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def calculate(
@@ -88,7 +87,7 @@ class ModelWrapper(BaseWrapper, Model):
     def __init__(self, model: Model, name: str = "_model"):
         BaseWrapper.__init__(self, model, name=name)
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def sample(
@@ -138,13 +137,13 @@ class ModelWrapper(BaseWrapper, Model):
 
     def add_critic_params(
         self, params: dict, override_params: bool = True, *args, **kwargs
-    ) -> StateDict:
+    ) -> typing.StateDict:
         return self.unwrapped.__class__.add_critic_params(
             self.unwrapped, params=params, override_params=override_params, *args, **kwargs
         )
 
     def update_states_with_critic(
-        self, actions: numpy.ndarray, batch_size: int, model_states: StatesModel, **kwargs
+        self, actions: typing.Tensor, batch_size: int, model_states: StatesModel, **kwargs
     ) -> StatesModel:
         return self.unwrapped.__class__.update_states_with_critic(
             self.unwrapped,
@@ -159,7 +158,7 @@ class EnvWrapper(BaseWrapper, Environment):
     def __init__(self, env: Environment, name: str = "_env"):
         BaseWrapper.__init__(self, env, name=name)
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def states_from_data(
@@ -186,12 +185,12 @@ class EnvWrapper(BaseWrapper, Environment):
             self.unwrapped, model_states=model_states, env_states=env_states
         )
 
-    def make_transitions(self, *args, **kwargs) -> Dict[str, numpy.ndarray]:
+    def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
         return self.unwrapped.__class__.make_transitions(self.unwrapped, *args, **kwargs)
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Union[Dict[str, numpy.ndarray], Tuple[numpy.ndarray, ...]]:
+    ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
         return self.unwrapped.__class__.states_to_data(
             self.unwrapped, model_states=model_states, env_states=env_states
         )
@@ -222,7 +221,7 @@ class WalkersWrapper(BaseWrapper, Walkers):
     def calculate_virtual_reward(self):
         return self.unwrapped.__class__.calculate_virtual_reward(self.unwrapped)
 
-    def get_in_bounds_compas(self) -> numpy.ndarray:
+    def get_in_bounds_compas(self) -> typing.Tensor:
         return self.unwrapped.__class__.get_in_bounds_compas(self.unwrapped)
 
     def update_clone_probs(self) -> None:
@@ -258,7 +257,7 @@ class WalkersWrapper(BaseWrapper, Walkers):
             self.unwrapped, env_states=env_states, model_states=model_states, **kwargs
         )
 
-    def _accumulate_and_update_rewards(self, rewards: numpy.ndarray):
+    def _accumulate_and_update_rewards(self, rewards: typing.Tensor):
         return self.unwrapped.__class__._accumulate_and_update_rewards(
             self.unwrapped, rewards=rewards
         )

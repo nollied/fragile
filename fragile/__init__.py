@@ -40,7 +40,8 @@ warnings.filterwarnings(
 )
 warnings.filterwarnings("ignore", message="Gdk.Cursor.new is deprecated")
 
-from fragile.core import slogging  # noqa: E402
+
+from fragile.backend import slogging  # noqa: E402
 from fragile.core.states import States  # noqa: E402
 from fragile.core.walkers import Walkers  # noqa: E402
 from fragile.version import __version__  # noqa: E402

@@ -4,10 +4,10 @@ import numpy
 from scipy.optimize import Bounds as ScipyBounds
 from scipy.optimize import minimize
 
+from fragile.backend import Backend, dtype, tensor, typing
 from fragile.core.env import Environment
 from fragile.core.models import Bounds
 from fragile.core.states import StatesEnv, StatesModel
-from fragile.core.utils import Scalar
 
 
 class Function(Environment):
@@ -18,9 +18,9 @@ class Function(Environment):
 
     def __init__(
         self,
-        function: Callable[[numpy.ndarray], numpy.ndarray],
+        function: Callable[[typing.Tensor], typing.Tensor],
         bounds: Bounds,
-        custom_domain_check: Callable[[numpy.ndarray], numpy.ndarray] = None,
+        custom_domain_check: Callable[[typing.Tensor], typing.Tensor] = None,
         actions_as_perturbations: bool = True,
     ):
         """
@@ -29,7 +29,7 @@ class Function(Environment):
         Args:
             function: Callable that takes a batch of vectors (batched across \
                       the first dimension of the array) and returns a vector of \
-                      scalar. This function is applied to a batch of walker \
+                      typing.Scalar. This function is applied to a batch of walker \
                       observations.
             bounds: :class:`Bounds` that defines the domain of the function.
             custom_domain_check: Callable that checks points inside the bounds \
@@ -67,9 +67,9 @@ class Function(Environment):
         cls,
         function: Callable,
         shape: tuple = None,
-        high: Union[int, float, numpy.ndarray] = numpy.inf,
-        low: Union[int, float, numpy.ndarray] = numpy.NINF,
-        custom_domain_check: Callable[[numpy.ndarray], numpy.ndarray] = None,
+        high: Union[int, float, typing.Tensor] = numpy.inf,
+        low: Union[int, float, typing.Tensor] = numpy.NINF,
+        custom_domain_check: Callable[[typing.Tensor], typing.Tensor] = None,
     ) -> "Function":
         """
         Initialize a function defining its shape and bounds without using a :class:`Bounds`.
@@ -77,16 +77,16 @@ class Function(Environment):
         Args:
             function: Callable that takes a batch of vectors (batched across \
                       the first dimension of the array) and returns a vector of \
-                      scalar. This function is applied to a batch of walker \
+                      typing.Scalar. This function is applied to a batch of walker \
                       observations.
             shape: Input shape of the solution vector without taking into account \
                     the batch dimension. For example, a two dimensional function \
                     applied to a batch of 5 walkers will have shape=(2,), even though
                     the observations will have shape (5, 2)
-            high: Upper bound of the function domain. If it's an scalar it will \
+            high: Upper bound of the function domain. If it's an typing.Scalar it will \
                   be the same for all dimensions. If its a numpy array it will \
                   be the upper bound for each dimension.
-            low: Lower bound of the function domain. If it's an scalar it will \
+            low: Lower bound of the function domain. If it's an typing.Scalar it will \
                   be the same for all dimensions. If its a numpy array it will \
                   be the lower bound for each dimension.
             custom_domain_check: Callable that checks points inside the bounds \
@@ -98,8 +98,8 @@ class Function(Environment):
 
         """
         if (
-            not isinstance(high, numpy.ndarray)
-            and not isinstance(low, numpy.ndarray) is None
+            not (dtype.is_tensor(high) or isinstance(high, (list, tuple)))
+            and not (dtype.is_tensor(low) or isinstance(low, (list, tuple)))
             and shape is None
         ):
             raise TypeError("Need to specify shape or high or low must be a numpy array.")
@@ -114,7 +114,7 @@ class Function(Environment):
 
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
-    ) -> Dict[str, numpy.ndarray]:
+    ) -> Dict[str, typing.Tensor]:
         """
         Extract the data that will be used to make the state transitions.
 
@@ -134,8 +134,8 @@ class Function(Environment):
         return data
 
     def make_transitions(
-        self, observs: numpy.ndarray, actions: numpy.ndarray
-    ) -> Dict[str, numpy.ndarray]:
+        self, observs: typing.Tensor, actions: typing.Tensor
+    ) -> Dict[str, typing.Tensor]:
         """
 
         Sum the target action to the observations to obtain the new points, and \
@@ -148,7 +148,7 @@ class Function(Environment):
         Returns:
             Dictionary containing the information of the new points evaluated.
 
-             ``{"states": new_points, "observs": new_points, "rewards": scalar array, \
+             ``{"states": new_points, "observs": new_points, "rewards": typing.Scalar array, \
              "oobs": boolean array}``
 
         """
@@ -173,7 +173,7 @@ class Function(Environment):
             equal to batch_size.
 
         """
-        oobs = numpy.zeros(batch_size, dtype=numpy.bool_)
+        oobs = tensor.zeros(batch_size, dtype=dtype.bool)
         new_points = self.sample_bounds(batch_size=batch_size)
         rewards = self.function(new_points).flatten()
         new_states = self.states_from_data(
@@ -185,7 +185,7 @@ class Function(Environment):
         )
         return new_states
 
-    def calculate_oobs(self, points: numpy.ndarray) -> numpy.ndarray:
+    def calculate_oobs(self, points: typing.Tensor) -> typing.Tensor:
         """
         Determine if a given batch of vectors lie inside the function domain.
 
@@ -199,13 +199,13 @@ class Function(Environment):
             and ``False`` otherwise.
 
         """
-        oobs = numpy.logical_not(self.bounds.points_in_bounds(points)).flatten()
+        oobs = tensor.logical_not(self.bounds.points_in_bounds(points)).flatten()
         if self.custom_domain_check is not None:
-            points_in_bounds = numpy.logical_not(oobs)
+            points_in_bounds = tensor.logical_not(oobs)
             oobs[points_in_bounds] = self.custom_domain_check(points[points_in_bounds])
         return oobs
 
-    def sample_bounds(self, batch_size: int) -> numpy.ndarray:
+    def sample_bounds(self, batch_size: int) -> typing.Tensor:
         """
         Return a matrix of points sampled uniformly from the :class:`Function` \
         domain.
@@ -218,11 +218,15 @@ class Function(Environment):
             :class:`Function` domain, stacked across the first dimension.
 
         """
-        new_points = numpy.zeros(tuple([batch_size]) + self.shape, dtype=numpy.float32)
+        new_points = tensor.zeros(tuple([batch_size]) + self.shape, dtype=dtype.float32)
         for i in range(batch_size):
-            new_points[i, :] = self.random_state.uniform(
-                low=self.bounds.low, high=self.bounds.high, size=self.shape
+            values = self.random_state.uniform(
+                low=tensor.astype(self.bounds.low, dtype.float),
+                high=tensor.astype(self.bounds.high, dtype.float32),
             )
+            values = tensor.astype(values, self.bounds.low.dtype)
+            new_points[i, :] = values
+
         return new_points
 
 
@@ -248,7 +252,7 @@ class Minimizer:
         self.args = args
         self.kwargs = kwargs
 
-    def minimize(self, x: numpy.ndarray):
+    def minimize(self, x: typing.Tensor):
         """
         Apply ``scipy.optimize.minimize`` to a single point.
 
@@ -269,12 +273,12 @@ class Minimizer:
             return y
 
         bounds = ScipyBounds(
-            ub=self.bounds.high if self.bounds is not None else None,
-            lb=self.bounds.low if self.bounds is not None else None,
+            ub=tensor.to_numpy(self.bounds.high) if self.bounds is not None else None,
+            lb=tensor.to_numpy(self.bounds.low) if self.bounds is not None else None,
         )
         return minimize(_optimize, x, bounds=bounds, *self.args, **self.kwargs)
 
-    def minimize_point(self, x: numpy.ndarray) -> Tuple[numpy.ndarray, Scalar]:
+    def minimize_point(self, x: typing.Tensor) -> Tuple[typing.Tensor, typing.Scalar]:
         """
         Minimize the target function passing one starting point.
 
@@ -287,11 +291,11 @@ class Minimizer:
 
         """
         optim_result = self.minimize(x)
-        point = optim_result["x"]
-        reward = float(optim_result["fun"])
+        point = tensor(optim_result["x"])
+        reward = tensor(float(optim_result["fun"]))
         return point, reward
 
-    def minimize_batch(self, x: numpy.ndarray) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    def minimize_batch(self, x: typing.Tensor) -> Tuple[typing.Tensor, typing.Tensor]:
         """
         Minimize a batch of points.
 
@@ -304,12 +308,17 @@ class Minimizer:
             and an array with the values assigned to each of the points found.
 
         """
-        result = numpy.zeros_like(x)
-        rewards = numpy.zeros((x.shape[0], 1))
-        for i in range(x.shape[0]):
-            new_x, reward = self.minimize_point(x[i, :])
-            result[i, :] = new_x
-            rewards[i, :] = float(reward)
+        x = tensor.to_numpy(tensor.copy(x))
+        with Backend.use_backend("numpy"):
+            result = tensor.zeros_like(x)
+            rewards = tensor.zeros((x.shape[0], 1))
+            for i in range(x.shape[0]):
+                new_x, reward = self.minimize_point(x[i, :])
+                result[i, :] = new_x
+                rewards[i, :] = float(reward)
+        self.bounds.high = tensor(self.bounds.high)
+        self.bounds.low = tensor(self.bounds.low)
+        result, rewards = tensor(result), tensor(rewards)
         return result, rewards
 
 
@@ -377,6 +386,7 @@ class MinimizerWrapper(Function):
             model_states=model_states, env_states=env_states
         )
         new_points, rewards = self.minimizer.minimize_batch(env_states.observs)
+        # new_points, rewards = tensor(new_points), tensor(rewards)
         oobs = self.calculate_oobs(new_points)
         updated_states = self.states_from_data(
             states=new_points,

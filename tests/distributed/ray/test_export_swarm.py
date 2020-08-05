@@ -1,8 +1,8 @@
 import sys
 
-import numpy
 import pytest
 
+from fragile.backend import dtype, tensor
 from fragile.distributed.ray.export_swarm import ExportedWalkers, ExportSwarm
 from tests.distributed.ray import init_ray, ray
 
@@ -45,8 +45,8 @@ def kill_swarm(swarm):
 def export_swarm(request):
     init_ray()
     swarm = swarm_dict.get(request.param)()
-    request.addfinalizer(lambda: kill_swarm(swarm))
-    return swarm
+    yield swarm
+    kill_swarm(swarm)
 
 
 @pytest.mark.skipif(sys.version_info >= (3, 8), reason="Requires python3.7 or lower")
@@ -57,15 +57,16 @@ class TestExportInterface:
 
     def test_get_data(self, export_swarm):
         states_attr = ray.get(export_swarm.get.remote("cum_rewards"))
-        assert isinstance(states_attr, numpy.ndarray)
+
+        assert dtype.is_tensor(states_attr), (type(states_attr), states_attr)
         env_attr = ray.get(export_swarm.get.remote("observs"))
-        assert isinstance(env_attr, numpy.ndarray)
+        assert dtype.is_tensor(env_attr)
         model_attr = ray.get(export_swarm.get.remote("actions"))
-        assert isinstance(model_attr, numpy.ndarray)
+        assert dtype.is_tensor(model_attr)
         walkers_attr = ray.get(export_swarm.get.remote("minimize"))
-        assert isinstance(walkers_attr, bool)
+        assert dtype.is_bool(walkers_attr)
         swarm_attr = ray.get(export_swarm.get.remote("n_import"))
-        assert isinstance(swarm_attr, int)
+        assert dtype.is_int(swarm_attr)
 
     def test_get_empty_walkers(self, export_swarm):
         walkers = ray.get(export_swarm.get_empty_export_walkers.remote())
@@ -77,13 +78,13 @@ class TestExportInterface:
         ray.get(export_swarm.run_exchange_step.remote(empty_walkers))
 
         walkers = ExportedWalkers(3)
-        walkers.rewards = numpy.array([999, 777, 333])
-        walkers.states = numpy.array(
-            [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]]
+        walkers.rewards = tensor([999, 777, 333], dtype=dtype.float)
+        walkers.states = tensor(
+            [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )
-        walkers.id_walkers = numpy.array([999, 777, 333])
-        walkers.observs = numpy.array(
-            [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]]
+        walkers.id_walkers = tensor([999, 777, 333], dtype=dtype.float)
+        walkers.observs = tensor(
+            [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )
         ray.get(export_swarm.reset.remote())
         exported = ray.get(export_swarm.run_exchange_step.remote(walkers))

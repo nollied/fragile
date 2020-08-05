@@ -10,7 +10,7 @@ def constant_dt():
 
 
 def gaussian_dt():
-    return GaussianDt(min_dt=1, max_dt=10, loc_dt=3, scale_dt=0)
+    return GaussianDt(min_dt=1, max_dt=10, loc_dt=3, scale_dt=1.0)
 
 
 def uniform_dt():

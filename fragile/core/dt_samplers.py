@@ -1,10 +1,9 @@
 from typing import Optional
 
-import numpy as np
 
+from fragile.backend import dtype, tensor, typing
 from fragile.core.base_classes import BaseCritic
 from fragile.core.states import States, StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import float_type, StateDict
 
 
 class BaseDtSampler(BaseCritic):
@@ -29,10 +28,10 @@ class BaseDtSampler(BaseCritic):
             discrete_values: If ``True`` return discrete time step values. If \
                             ``False`` allow to return floating point time steps.
         """
-        self._dtype = float_type if not discrete_values else int
+        self._dtype = dtype.float if not discrete_values else int
         super(BaseDtSampler, self).__init__()
 
-    def get_params_dict(self) -> StateDict:
+    def get_params_dict(self) -> typing.StateDict:
         """Return the dictionary with the parameters to create a new `GaussianDt` critic."""
         base_params = super(BaseDtSampler, self).get_params_dict()
         params = {"dt": {"dtype": self._dtype}}
@@ -100,7 +99,7 @@ class ConstantDt(BaseDtSampler):
         if batch_size is None and env_states is None:
             raise ValueError("env_states and batch_size cannot be both None.")
         batch_size = batch_size or env_states.n
-        dt = np.ones(batch_size, dtype=self._dtype) * self.dt
+        dt = tensor.ones(batch_size, dtype=self._dtype) * self.dt
         states = self.states_from_data(batch_size=batch_size, critic_score=dt, dt=dt)
         return states
 
@@ -148,7 +147,7 @@ class UniformDt(BaseDtSampler):
             raise ValueError("env_states and batch_size cannot be both None.")
         batch_size = batch_size or env_states.n
         dt = self.random_state.uniform(low=self.min_dt, high=self.max_dt, size=batch_size)
-        dt = dt.astype(dtype=self._dtype)
+        dt = tensor.astype(dt, self._dtype)
         states = self.states_from_data(batch_size=batch_size, critic_score=dt, dt=dt)
         return states
 
@@ -210,6 +209,6 @@ class GaussianDt(BaseDtSampler):
             raise ValueError("env_states and batch_size cannot be both None.")
         batch_size = batch_size or env_states.n
         dt = self.random_state.normal(loc=self.mean_dt, scale=self.std_dt, size=batch_size)
-        dt = np.clip(dt, self.min_dt, self.max_dt).astype(self._dtype)
+        dt = tensor.astype(tensor.clip(dt, self.min_dt, self.max_dt), self._dtype)
         states = self.states_from_data(batch_size=batch_size, critic_score=dt, dt=dt)
         return states

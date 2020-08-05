@@ -1,4 +1,5 @@
 import sys
+import warnings
 
 import pytest
 
@@ -66,9 +67,10 @@ class TestExportInterface:
         assert swarm.epoch == 0
 
     def test_score_gets_higher(self, swarm_with_score):
+        warnings.warn("test_score_gets_higher")
         swarm, target_score = swarm_with_score
         swarm.reset()
-        swarm.run(report_interval=25)
+        swarm.run(report_interval=50)
         reward = swarm.get_best().rewards
         assert reward > target_score, "Iters: {}, rewards: {}".format(
             swarm.walkers.epoch, swarm.walkers.states.cum_rewards

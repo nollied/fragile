@@ -1,30 +1,27 @@
 import pytest
 import networkx
-import numpy
 
+from fragile.backend import dtype, tensor
 from fragile.core.tree import NetworkxTree, HistoryTree
 
 
 def random_powerlaw():
     g = networkx.DiGraph()
     t = networkx.random_powerlaw_tree(500, gamma=3, tries=1000, seed=160290)
-    return networkx.compose(g, t)
+    graph = networkx.compose(g, t)
+    mapping = {n: dtype.to_node_id(n) for n in graph.nodes}
+    return networkx.relabel_nodes(graph, mapping)
 
 
 def small_tree():
-    node_data = {"a": numpy.arange(10), "b": numpy.zeros(10)}
-    edge_data = {"c": numpy.ones(10)}
+    node_data = {"a": tensor.arange(10), "b": tensor.zeros(10)}
+    edge_data = {"c": tensor.ones(10)}
     g = networkx.DiGraph()
     for i in range(8):
-        g.add_node(i, **node_data)
-
-    g.add_edge(0, 1, **edge_data)
-    g.add_edge(1, 2, **edge_data)
-    g.add_edge(2, 3, **edge_data)
-    g.add_edge(2, 4, **edge_data)
-    g.add_edge(2, 5, **edge_data)
-    g.add_edge(3, 6, **edge_data)
-    g.add_edge(3, 7, **edge_data)
+        g.add_node(dtype.to_node_id(i), **node_data)
+    pairs = [(0, 1), (1, 2), (2, 3), (2, 4), (2, 5), (3, 6), (3, 7)]
+    for a, b in pairs:
+        g.add_edge(dtype.to_node_id(a), dtype.to_node_id(b), **edge_data)
     return g
 
 
@@ -41,17 +38,18 @@ class TestNetworkxTree:
 
     def test_reset_graph(self, tree):
         node_data = {"miau": 2104}
-        tree.reset_graph(root_id=421, node_data=node_data, epoch=0)
-        assert tree.root_id == 421
-        assert isinstance(tree.data.nodes[421], dict)
-        assert tree.data.nodes[421]["epoch"] == 0
+        root_id = dtype.to_node_id(421)
+        tree.reset_graph(root_id=root_id, node_data=node_data, epoch=0)
+        assert tree.root_id == root_id
+        assert isinstance(tree.data.nodes[root_id], dict)
+        assert tree.data.nodes[root_id]["epoch"] == 0
         assert len(tree) == 1
-        assert tree.data.nodes[421]["miau"] == 2104
+        assert tree.data.nodes[root_id]["miau"] == 2104
 
     def test_append_leaf(self, tree):
-        node_data = {"node": numpy.arange(10)}
+        node_data = {"node": tensor.arange(10)}
         edge_data = {"edge": False}
-        leaf_id = -421
+        leaf_id = dtype.to_node_id(-421)
         epoch = 123
         tree.append_leaf(
             leaf_id=leaf_id,

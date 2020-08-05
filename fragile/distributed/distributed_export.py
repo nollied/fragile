@@ -131,4 +131,4 @@ class DistributedExport:
             if self.epoch % report_interval == 0 and self.epoch > 0:
                 # Evaluate the current model after every 10 updates.
                 best = self.get_best()
-                print("iter {} best_reward: {:.3f}".format(i, best.rewards))
+                print("iter {} best_reward: {}".format(i, best.rewards))

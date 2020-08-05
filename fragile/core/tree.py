@@ -2,11 +2,12 @@ import copy
 from typing import Any, Dict, Generator, List, Set, Tuple, Union
 
 import networkx as nx
-import numpy
 
+# import numpy
+
+from fragile.backend import Backend, dtype, hasher, random_state, tensor, typing
 from fragile.core.base_classes import BaseTree
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
-from fragile.core.utils import random_state
 
 
 NodeId = Union[str, int]
@@ -25,18 +26,18 @@ class NetworkxTree(BaseTree):
     DEFAULT_NODE_DATA = (
         "states",
         "observs",
-        "rewards",
-        "oobs",
-        "terminals",
-        "cum_rewards",
         "compas_clone",
         "processed_rewards",
         "virtual_rewards",
-        "cum_rewards",
         "distances",
         "clone_probs",
         "will_clone",
         "in_bounds",
+        "dt",
+        "rewards",
+        "oobs",
+        "terminals",
+        "cum_rewards",
     )
 
     DEFAULT_EDGE_DATA = ("actions", "dt")
@@ -69,7 +70,7 @@ class NetworkxTree(BaseTree):
             edge_names: Names of the data attributes of the :class:`States` that \
                        will be stored as edge attributes in the internal graph.
         """
-        super(NetworkxTree, self).__init__(root_id=root_id)
+        super(NetworkxTree, self).__init__(root_id=dtype.to_node_id(root_id))
         self.next_prefix = next_prefix
         self.names = names if names is not None else []
         self.data: nx.DiGraph = nx.DiGraph()
@@ -118,11 +119,11 @@ class NetworkxTree(BaseTree):
             walkers_states=walkers_states,
             only_node_data=True,
         )
-        self.reset_graph(root_id=root_id, node_data=node_data, epoch=-1)
+        self.reset_graph(root_id=dtype.to_node_id(root_id), node_data=node_data, epoch=-1)
 
     def add_states(
         self,
-        parent_ids: List[int],
+        parent_ids: List[NodeId],
         env_states: StatesEnv = None,
         model_states: StatesModel = None,
         walkers_states: StatesWalkers = None,
@@ -147,7 +148,11 @@ class NetworkxTree(BaseTree):
             None
 
         """
-        leaf_ids = walkers_states.get("id_walkers")
+        if hasher.uses_true_hash:
+            leaf_ids = tensor.to_numpy(walkers_states.get("id_walkers"))
+        else:
+            leaf_ids = hasher.get_array_of_ids(len(walkers_states))
+        parent_ids = tensor.to_numpy(parent_ids)
         # Keep track of nodes that are active to make sure that they are not pruned
         self.last_added = set(leaf_ids) | set(parent_ids)
         for i, (leaf, parent) in enumerate(zip(leaf_ids, parent_ids)):
@@ -164,6 +169,8 @@ class NetworkxTree(BaseTree):
                 edge_data=edge_data,
                 epoch=n_iter,
             )
+        if not hasher.uses_true_hash:
+            walkers_states.update(id_walkers=leaf_ids)
 
     def prune_tree(self, alive_leafs: Set[int]):
         """
@@ -202,7 +209,7 @@ class NetworkxTree(BaseTree):
             None.
 
         """
-        self.root_id = root_id if root_id is not None else self.root_id
+        self.root_id = dtype.to_node_id(root_id) if root_id is not None else self.root_id
         self.data: nx.DiGraph = nx.DiGraph()
         self.data.add_node(self.root_id, epoch=epoch, **node_data)
         self._node_count = 1
@@ -243,6 +250,8 @@ class NetworkxTree(BaseTree):
         """
         # Don't add any leaf that creates a cycle in the graph
         if leaf_id not in self.data.nodes:
+            if parent_id not in self.data.nodes:
+                raise ValueError("Parent not in graph")
             self.data.add_node(leaf_id, epoch=epoch, **node_data)
             self.data.add_edge(parent_id, leaf_id, **edge_data)
             self.leafs.add(leaf_id)
@@ -290,6 +299,7 @@ class NetworkxTree(BaseTree):
             None
 
         """
+        leaf_id = dtype.to_node_id(leaf_id)
         if (
             leaf_id == self.root_id
             or leaf_id in alive_nodes  # Remove only old nodes (inserted for 2+ epochs)
@@ -309,7 +319,7 @@ class NetworkxTree(BaseTree):
     def get_parent(self, node_id: NodeId) -> NodeId:
         """Get the node id of the parent of the target node."""
         try:
-            return list(self.data.in_edges(node_id))[0][0]
+            return list(self.data.in_edges(dtype.to_node_id(node_id)))[0][0]
         except (KeyError, IndexError):
             raise KeyError("Node %s does not have a parent in the graph" % node_id)
 
@@ -325,6 +335,7 @@ class NetworkxTree(BaseTree):
             It starts with ``self.root_id`` and ends with ``leaf_id``.
 
         """
+        leaf_id = dtype.to_node_id(leaf_id)
         nodes = [leaf_id]
         while leaf_id != self.root_id:
             node = self.get_parent(leaf_id)
@@ -347,6 +358,7 @@ class NetworkxTree(BaseTree):
             List of the node ids between ``root`` and ``leaf_id``.
 
         """
+        leaf_id = dtype.to_node_id(leaf_id)
         root = root_id if root_id is not None else self.root_id
         nodes = nx.shortest_path(self.data, root, leaf_id)
         return nodes
@@ -480,7 +492,7 @@ class HistoryTree(NetworkxTree):
             node_data, edge_data, *next_node_data = data
             if name.startswith(self.next_prefix):
                 true_name = name.replace(self.next_prefix, "")
-                return next_node_data[true_name]
+                return next_node_data[0][true_name]
             elif name in node_data:
                 return node_data[name]
             elif name in edge_data:
@@ -489,14 +501,14 @@ class HistoryTree(NetworkxTree):
 
         return tuple(get_item(data, name) for name in names)
 
-    def _process_batch(self, batch_data: List[tuple]) -> Tuple[numpy.ndarray, ...]:
+    def _process_batch(self, batch_data: List[tuple]) -> Tuple[typing.Tensor, ...]:
         """
         Preprocess the list of tuples representing a batched group of elements \
         and return a tuple of arrays representing the batched values for every \
         data attribute.
         """
         unpacked = zip(*batch_data)
-        return tuple(numpy.asarray(val) for val in unpacked)
+        return tuple(tensor.as_tensor(val) for val in unpacked)
 
     def _generate_batches(
         self, generator: NodeDataGenerator, names: NamesData, batch_size: int = None,
@@ -525,10 +537,12 @@ class HistoryTree(NetworkxTree):
         if names is None:
             return self.names
         for name in names:
-            if name.lstrip(self.next_prefix) not in self.names:
+            name = name[len(self.next_prefix) :] if name.startswith(self.next_prefix) else name
+            if name not in self.names:
                 raise KeyError(
                     "Data corresponding to name %s "
-                    "not present in self.names %s" % (names, self.names)
+                    "not present in self.names: %s for element %s"
+                    % (name, self.names, name[len(self.next_prefix) :])
                 )
         return names
 
@@ -589,7 +603,9 @@ class HistoryTree(NetworkxTree):
             edge_data, next_node_data).
 
         """
-        for next_node in random_state.permutation(self.data.nodes):
+        with Backend.use_backend("numpy"):
+            permutaion = random_state.permutation(list(self.data.nodes))
+        for next_node in permutaion:
             if next_node == self.root_id:
                 continue
             node = self.get_parent(next_node)
@@ -620,7 +636,7 @@ class HistoryTree(NetworkxTree):
         names = self._validate_names(names)
         return_children = any(name.startswith(self.next_prefix) for name in names)
         path_generator = self.path_data_generator(
-            node_ids=node_ids, return_children=return_children
+            node_ids=tensor.to_numpy(node_ids), return_children=return_children
         )
         return self._generate_batches(path_generator, names=names, batch_size=batch_size)
 
@@ -665,5 +681,6 @@ class HistoryTree(NetworkxTree):
             Generator providing the data corresponding to a branch of the internal tree.
 
         """
+        node_id = dtype.to_node_id(node_id)
         branch_path = self.get_path_node_ids(leaf_id=node_id)
         return self.iterate_path_data(branch_path, batch_size=batch_size, names=names)
