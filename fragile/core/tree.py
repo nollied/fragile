@@ -40,7 +40,7 @@ class NetworkxTree(BaseTree):
         "cum_rewards",
     )
 
-    DEFAULT_EDGE_DATA = ("actions","dt")
+    DEFAULT_EDGE_DATA = ("actions", "dt")
 
     def __init__(
         self,

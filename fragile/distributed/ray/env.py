@@ -143,6 +143,7 @@ class Environment:
         return self.env.get_params_dict()
 
     def execute(self, name, **kwargs):
+        """Execute the target function in all the different workers."""
         return getattr(self.env, name)(**kwargs)
 
 

@@ -7,7 +7,7 @@ from fragile.backend.data_types import dtype
 def _new_torch_tensor(x, use_grad, device, *args, **kwargs):
     try:
         new_tensor = torch.tensor(x, *args, requires_grad=use_grad, device=device, **kwargs,)
-    except Exception as e:
+    except Exception:
         new_tensor = torch.tensor(x, *args, requires_grad=False, device=device, **kwargs)
     return new_tensor
 
@@ -101,9 +101,7 @@ class tensor(metaclass=MetaTensor):
         except Exception:
             try:
                 return numpy.array(x, *args, **kwargs)
-            except Exception as e:
-                # if isinstance(x, list):
-                #    return numpy.array(x, dtype=object)
+            except Exception:
                 return numpy.array(tuple(x), dtype=object)
 
     @classmethod

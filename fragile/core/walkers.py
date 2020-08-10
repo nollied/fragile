@@ -92,7 +92,7 @@ class SimpleWalkers(BaseWalkers):
                 text += "Environment States: {}\n".format(self._repr_state(self._env_states))
                 text += "Model States: {}\n".format(self._repr_state(self._model_states))
                 return text
-            except Exception as e:
+            except Exception:
                 return super(SimpleWalkers, self).__repr__()
 
     def _print_stats(self) -> str:

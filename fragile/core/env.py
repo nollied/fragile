@@ -74,7 +74,11 @@ class Environment(BaseEnvironment):
         )
         rewards = tensor(rewards, dtype=dtype.float32)
         observs = tensor(observs)
-        states = tensor(states)
+        try:
+            states = tensor(states)
+        except Exception as e:
+            print(Backend.get_current_backend())
+            raise e
         state = super(Environment, self).states_from_data(
             batch_size=batch_size,
             states=states,

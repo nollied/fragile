@@ -6,6 +6,8 @@ from fragile.core.swarm import Swarm
 
 
 class ReplayMemory:
+    """Replay buffer that contains data collected from algorithm runs."""
+
     _log = logging.getLogger("Memory")
 
     def __init__(

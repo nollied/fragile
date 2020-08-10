@@ -1,11 +1,10 @@
 import atexit
-from functools import partial
 import multiprocessing
 import sys
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
 
-from fragile.backend import tensor, typing
+from fragile.backend import tensor, typing  # noqa: F401
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
@@ -280,7 +279,7 @@ class _BatchEnv:
         for k in data_dicts[0].keys():
             try:
                 grouped = tensor.concatenate([tensor.to_backend(ddict[k]) for ddict in data_dicts])
-            except Exception as e:
+            except Exception:
                 val = str([ddict[k].shape for ddict in data_dicts])
                 raise ValueError(val)
             kwargs[k] = grouped
@@ -381,6 +380,7 @@ class ParallelEnv(EnvWrapper):
                        :class:`Environment` in parallel.
             blocking: If ``True`` perform the steps in a sequential fashion and \
                       block the process between steps.
+            distribute: List of function names that will be executed in all the different workers.
 
         """
         self.n_workers = n_workers
@@ -443,6 +443,7 @@ class ParallelEnv(EnvWrapper):
         return new_env_state
 
     def distribute(self, name, **kwargs):
+        """Execute the target function in all the different workers."""
         return self.parallel_env.distribute(name, **kwargs)
 
     def states_to_data(
@@ -495,6 +496,7 @@ class RayEnv(EnvWrapper):
                        :class:`Environment` in parallel.
             env_kwargs: Passed to ``env_callable``.
             options: passed to RemoteEnvironment.options().
+            distribute: List of function names that will be executed in all the different workers.
 
         """
         from fragile.distributed.ray.env import Environment as RemoteEnvironment
@@ -604,6 +606,7 @@ class RayEnv(EnvWrapper):
         return data_dicts
 
     def distribute(self, name, **kwargs):
+        """Execute the target function in all the different workers."""
         chunk_data = self._split_inputs_in_chunks(**kwargs)
         from fragile.distributed.ray import ray
 
