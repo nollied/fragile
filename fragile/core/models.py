@@ -203,7 +203,8 @@ class _DtModel(Model):
             actions: Numpy array representing the actions calculated by the model.
             batch_size: Same batch size used when calling `sample`.
             model_states: Same model_states used when calling `sample`.
-            **kwargs: Kwargs for `critic.calculate`.
+            critic_kwargs: Passed to critic.calculate().
+            **kwargs: Passed to model_states.update().
 
         Returns:
             model_states updated with the actions and the dt calculated by the Critic.

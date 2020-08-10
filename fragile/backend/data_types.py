@@ -106,28 +106,28 @@ class MetaTyping(type):
     def int(self):
         try:
             return Union[int, dtype.int64, dtype.int32, dtype.int16]
-        except Exception as e:
+        except Exception:
             return int
 
     @property
     def float(self):
         try:
             return Union[float, dtype.float64, dtype.float32, dtype.float16]
-        except Exception as e:
+        except Exception:
             return float
 
     @property
     def bool(self):
         try:
             return Union[bool, dtype.bool]
-        except Exception as e:
+        except Exception:
             return bool
 
     @property
     def Scalar(self):
         try:
             return Union[self.float, self.int]
-        except Exception as e:
+        except Exception:
             return Union[int, float]
 
 
