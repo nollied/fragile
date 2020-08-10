@@ -47,6 +47,8 @@ def update_backend_config(
 ):
     with open(filepath, "r") as stream:
         config = yaml.safe_load(stream)
+        if config is None:
+            config = {}
     if backend is not None:
         config["default_backend"] = backend
     if device is not None:

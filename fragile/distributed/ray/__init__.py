@@ -11,6 +11,9 @@ except (ImportError, ModuleNotFoundError) as e:
         class ray:
             """Dummy to avoid import errors before ray is released for Python 3.8."""
 
+            def __getattr__(self, item):
+                return lambda *args, **kwargs: None
+
             def remote(self, *args, **kwargs):
                 """Do nothing."""
                 pass
