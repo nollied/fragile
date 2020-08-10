@@ -1,5 +1,5 @@
 [flake8]
-ignore=B008,B301,C815,C816,C812,D100,D105,D200,D202,D301,D402,E121,E123,E126,E203,E226,E24,E704,W503,W504
+ignore=B008,B301,C815,C816,C812,D100,D105,D200,D202,D301,D402,E121,E123,E126,E203,E226,E24,E704,F821,W503,W504
 max-line-length=99
 exclude=
     .git
@@ -13,6 +13,7 @@ per-file-ignores=
     **/tests/**:D
     **/backend/**:D
     **/tests/**:F811
+    ./fragile/core/memory.py:D
     ./fragile/core/wrappers.py:D
     ./fragile/optimize/benchmarks.py:D
     ./fragile/algorithms/langevin_env.py:D

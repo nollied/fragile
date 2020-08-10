@@ -279,7 +279,7 @@ class _BatchEnv:
         for k in data_dicts[0].keys():
             try:
                 grouped = tensor.concatenate([tensor.to_backend(ddict[k]) for ddict in data_dicts])
-            except Exception as e:
+            except Exception:
                 val = str([ddict[k].shape for ddict in data_dicts])
                 raise ValueError(val)
             kwargs[k] = grouped
@@ -380,6 +380,7 @@ class ParallelEnv(EnvWrapper):
                        :class:`Environment` in parallel.
             blocking: If ``True`` perform the steps in a sequential fashion and \
                       block the process between steps.
+            distribute: List of function names that will be executed in all the different workers.
 
         """
         self.n_workers = n_workers
@@ -442,6 +443,7 @@ class ParallelEnv(EnvWrapper):
         return new_env_state
 
     def distribute(self, name, **kwargs):
+        """Execute the target function in all the different workers."""
         return self.parallel_env.distribute(name, **kwargs)
 
     def states_to_data(
@@ -494,6 +496,7 @@ class RayEnv(EnvWrapper):
                        :class:`Environment` in parallel.
             env_kwargs: Passed to ``env_callable``.
             options: passed to RemoteEnvironment.options().
+            distribute: List of function names that will be executed in all the different workers.
 
         """
         from fragile.distributed.ray.env import Environment as RemoteEnvironment
@@ -603,6 +606,7 @@ class RayEnv(EnvWrapper):
         return data_dicts
 
     def distribute(self, name, **kwargs):
+        """Execute the target function in all the different workers."""
         chunk_data = self._split_inputs_in_chunks(**kwargs)
         from fragile.distributed.ray import ray
 

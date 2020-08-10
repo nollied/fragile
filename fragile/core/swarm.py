@@ -485,6 +485,7 @@ class NoBalance(Swarm):
     """Swarm that does not perform the cloning process."""
 
     def __init__(self, balance_interval: int = 5, *args, **kwargs):
+        """Initialize a :class:`NoBalance`."""
         super(NoBalance, self).__init__(*args, **kwargs)
         self.balance_interval = balance_interval
 
