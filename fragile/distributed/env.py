@@ -1,4 +1,5 @@
 import atexit
+from functools import partial
 import multiprocessing
 import sys
 import traceback
@@ -109,6 +110,13 @@ class _ExternalProcess:
 
         """
         promise = self.call(self.TARGET, *args, **kwargs)
+        if blocking:
+            return promise()
+        else:
+            return promise
+
+    def execute(self, name, blocking: bool = False, *args, **kwargs):
+        promise = self.call(name, *args, **kwargs)
         if blocking:
             return promise()
         else:
@@ -271,7 +279,7 @@ class _BatchEnv:
         kwargs = {}
         for k in data_dicts[0].keys():
             try:
-                grouped = tensor.concatenate([ddict[k] for ddict in data_dicts])
+                grouped = tensor.concatenate([tensor.to_backend(ddict[k]) for ddict in data_dicts])
             except Exception as e:
                 val = str([ddict[k].shape for ddict in data_dicts])
                 raise ValueError(val)
@@ -295,6 +303,20 @@ class _BatchEnv:
         data_dicts = [result if self._blocking else result() for result in results]
         return data_dicts
 
+    def distribute(self, name, **kwargs):
+        chunk_data = self._split_inputs_in_chunks(**kwargs)
+        results = [
+            env.execute(name=name, blocking=self._blocking, **chunk)
+            for env, chunk in zip(self._envs, chunk_data)
+        ]
+        split_results = [result if self._blocking else result() for result in results]
+        if isinstance(split_results[0], dict):
+            merged = self._merge_data(split_results)
+        else:  # Assumes batch of tensors
+            split_results = [tensor.to_backend(res) for res in split_results]
+            merged = tensor.concatenate(split_results)
+        return merged
+
 
 class _ParallelEnvironment:
     """Wrap any environment to be stepped in parallel when step is called."""
@@ -315,6 +337,9 @@ class _ParallelEnvironment:
     def make_transitions(self, *args, **kwargs) -> Dict[str, typing.Tensor]:
         """Use the underlying parallel environment to calculate the state transitions."""
         return self._batch_env.make_transitions(*args, **kwargs)
+
+    def distribute(self, name, **kwargs):
+        return self._batch_env.distribute(name, **kwargs)
 
     def reset(self, batch_size: int = 1, **kwargs) -> StatesEnv:
         """
@@ -341,7 +366,11 @@ class ParallelEnv(EnvWrapper):
     """
 
     def __init__(
-        self, env_callable: Callable[..., CoreEnv], n_workers: int = 8, blocking: bool = False
+        self,
+        env_callable: Callable[..., CoreEnv],
+        n_workers: int = 8,
+        blocking: bool = False,
+        distribute: List[str] = None,
     ):
         """
         Initialize a :class:`ParallelEnv`.
@@ -356,13 +385,16 @@ class ParallelEnv(EnvWrapper):
         """
         self.n_workers = n_workers
         self.blocking = blocking
+        self._distribute_names = distribute if distribute is not None else []
         self.parallel_env = _ParallelEnvironment(
             env_callable=env_callable, n_workers=n_workers, blocking=blocking
         )
         super(ParallelEnv, self).__init__(env_callable(), name="_local_env")
 
     def __getattr__(self, item):
-        if isinstance(self._local_env, BaseWrapper):
+        if item in self._distribute_names:
+            return lambda **kwargs: self.distribute(item, **kwargs)
+        elif isinstance(self._local_env, BaseWrapper):
             return getattr(self._local_env, item)
         return self._local_env.__getattribute__(item)
 
@@ -410,6 +442,9 @@ class ParallelEnv(EnvWrapper):
         new_env_state = self.states_from_data(len(env_states), **new_data)
         return new_env_state
 
+    def distribute(self, name, **kwargs):
+        return self.parallel_env.distribute(name, **kwargs)
+
     def states_to_data(
         self, model_states: StatesModel, env_states: StatesEnv
     ) -> Union[Dict[str, typing.Tensor], Tuple[typing.Tensor, ...]]:
@@ -449,6 +484,7 @@ class RayEnv(EnvWrapper):
         n_workers: int,
         env_kwargs: dict = None,
         options: dict = None,
+        distribute: List[str] = None,
     ):
         """
         Initialize a :class:`RayEnv`.
@@ -466,6 +502,7 @@ class RayEnv(EnvWrapper):
         options = options if options is not None else {}
         env_kwargs = {} if env_kwargs is None else env_kwargs
         self.n_workers = n_workers
+        self._distribute_name = distribute if distribute is not None else {}
         self.envs: List[RemoteEnvironment] = [
             RemoteEnvironment.options(**options).remote(
                 env_callable=env_callable, env_kwargs=env_kwargs
@@ -485,6 +522,13 @@ class RayEnv(EnvWrapper):
         ``environment_callable``.
         """
         return self
+
+    def __getattr__(self, item):
+        if item in self._distribute_name:
+            return lambda **kwargs: self.distribute(name=item, **kwargs)
+        if isinstance(self._local_env, BaseWrapper):
+            return getattr(self._local_env, item)
+        return self._local_env.__getattribute__(item)
 
     def step(self, model_states: StatesModel, env_states: StatesEnv) -> StatesEnv:
         """
@@ -547,17 +591,32 @@ class RayEnv(EnvWrapper):
         else:
             return split_args_in_chunks(args, len(self.envs))
 
-    def _make_transitions(self, split_results):
+    def _make_transitions(self, chunk_data):
         from fragile.distributed.ray import ray
 
         results = [
             env.make_transitions.remote(**chunk)
             if self.kwargs_mode
             else env.make_transitions.remote(*chunk)
-            for env, chunk in zip(self.envs, split_results)
+            for env, chunk in zip(self.envs, chunk_data)
         ]
         data_dicts = ray.get(results)
         return data_dicts
+
+    def distribute(self, name, **kwargs):
+        chunk_data = self._split_inputs_in_chunks(**kwargs)
+        from fragile.distributed.ray import ray
+
+        results = [
+            env.execute.remote(name=name, **chunk) for env, chunk in zip(self.envs, chunk_data)
+        ]
+        split_results = ray.get(results)
+        if isinstance(split_results[0], dict):
+            merged = self._merge_data(split_results)
+        else:  # Assumes batch of tensors
+            split_results = [tensor.to_backend(res) for res in split_results]
+            merged = tensor.concatenate(split_results)
+        return merged
 
     def reset(
         self, batch_size: int = 1, env_states: StatesEnv = None, *args, **kwargs

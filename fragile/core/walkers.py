@@ -92,7 +92,7 @@ class SimpleWalkers(BaseWalkers):
                 text += "Environment States: {}\n".format(self._repr_state(self._env_states))
                 text += "Model States: {}\n".format(self._repr_state(self._model_states))
                 return text
-            except Exception:
+            except Exception as e:
                 return super(SimpleWalkers, self).__repr__()
 
     def _print_stats(self) -> str:
@@ -311,6 +311,7 @@ class SimpleWalkers(BaseWalkers):
             self.states.update(walkers_states)
         else:
             self.states.reset()
+        self.env_states.times = self.env_states.times.copy()
         self.env_states.times[:] = -1.0
         old_ids = tensor.copy(self.states.id_walkers)
         self.update_states(env_states=env_states, model_states=model_states)
@@ -372,7 +373,7 @@ class SimpleWalkers(BaseWalkers):
         for k, v in state.items():
             if k in skip_print:
                 continue
-            elif k == "best_state" and (v.dtype == "O" or v.dtype.startswith("S")):
+            elif k == "best_state" and (v.dtype == "O" or str(v.dtype).startswith("S")):
                 continue
             shape = v.shape if hasattr(v, "shape") else None
             new_str = (

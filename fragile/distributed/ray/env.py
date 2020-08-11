@@ -142,6 +142,9 @@ class Environment:
         """Return the parameter dictionary of the wrapped :class:`fragile.Environment`."""
         return self.env.get_params_dict()
 
+    def execute(self, name, **kwargs):
+        return getattr(self.env, name)(**kwargs)
+
 
 @ray.remote
 def merge_data(data_dicts: List[Dict[str, typing.Tensor]]):
