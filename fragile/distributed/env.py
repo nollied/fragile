@@ -4,7 +4,7 @@ import sys
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
 
-from fragile.backend import tensor, typing
+from fragile.backend import tensor, typing  # noqa: F401
 from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.utils import split_args_in_chunks, split_kwargs_in_chunks
