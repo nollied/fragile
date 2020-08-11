@@ -164,6 +164,7 @@ class DiscreteEnv(Environment):
         Step the underlying :class:`plangym.Environment` using the ``step_batch`` \
         method of the ``plangym`` interface.
         """
+        # print("in_transitions", Backend.get_current_backend())
         dt = tensor.to_numpy(dt) if dtype.is_tensor(dt) else dt
         new_states, observs, rewards, ends, infos = self._env.step_batch(
             actions=tensor.to_numpy(actions), states=tensor.to_numpy(states), dt=dt
