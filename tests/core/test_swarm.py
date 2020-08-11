@@ -1,7 +1,8 @@
-import numpy
+# import numpy
 from plangym import AtariEnvironment, ClassicControl
 import pytest
 
+from fragile.backend import Backend, random_state, tensor
 from fragile.core.dt_samplers import GaussianDt
 from fragile.core.env import BaseEnvironment, DiscreteEnv
 from fragile.core.models import BaseModel, DiscreteUniform, NormalContinuous
@@ -104,21 +105,22 @@ class TestSwarm:
         state_dict = param_dict["states"]
         obs_size = obs_dict.get("size", obs_dict["shape"][1:])
         state_size = state_dict.get("size", state_dict["shape"][1:])
-        obs = numpy.random.random(obs_size).astype(obs_dict["dtype"])
-        state = numpy.random.random(state_size).astype(state_dict["dtype"])
+        obs = tensor.astype(random_state.random(obs_size), obs_dict["dtype"])
+        state = tensor.astype(random_state.random(state_size), state_dict["dtype"])
         reward = 160290
         root_walker = OneWalker(observ=obs, reward=reward, state=state)
         swarm.reset(root_walker=root_walker)
         swarm_best_id = swarm.best_id
         root_walker_id = root_walker.id_walkers
-        assert (swarm.best_obs == obs).all()
         assert (swarm.best_state == state).all()
+        assert (swarm.best_obs == obs).all(), (obs, tensor(swarm.best_obs))
         assert swarm.best_reward == reward
-        assert swarm_best_id == root_walker_id
         assert (swarm.walkers.env_states.observs == obs).all()
         assert (swarm.walkers.env_states.states == state).all()
         assert (swarm.walkers.env_states.rewards == reward).all()
-        assert (swarm.walkers.states.id_walkers == root_walker.id_walkers).all()
+        if Backend.is_numpy():
+            assert (swarm.walkers.states.id_walkers == root_walker.id_walkers).all()
+            assert swarm_best_id == root_walker_id[0]
 
     def test_step_does_not_crashes(self, swarm):
         swarm.reset()

@@ -4,6 +4,7 @@ import numpy
 import ray
 from tqdm.auto import tqdm
 
+from fragile.backend import typing
 from fragile.core.base_classes import BaseEnvironment, BaseModel
 from fragile.core.memory import ReplayMemory as CoreMemory
 from fragile.core.states import OneWalker
@@ -161,11 +162,11 @@ class ReplayCreator:
         mem_len = ray.get(self.memory.get.remote("len"))
         return mem_len
 
-    def get_values(self) -> Tuple[numpy.ndarray, ...]:
+    def get_values(self) -> Tuple[typing.Tensor, ...]:
         """Return a tuple containing the data attributes stored in the :class:`ReplayMemory`."""
         return ray.get(self.memory.get_values.remote())
 
-    def iterate_values(self) -> Iterable[Tuple[numpy.ndarray]]:
+    def iterate_values(self) -> Iterable[Tuple[typing.Tensor]]:
         """
         Return a generator that yields a tuple containing the data of each state \
         stored in the memory.

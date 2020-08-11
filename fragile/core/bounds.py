@@ -1,9 +1,9 @@
 from collections.abc import Iterable as _Iterable
 from typing import Iterable, Optional, Tuple, Union
 
-import numpy as numpy
+import numpy
 
-from fragile.core.utils import Scalar
+from fragile.backend import dtype as _dtype, tensor, typing
 
 
 class Bounds:
@@ -16,8 +16,8 @@ class Bounds:
 
     def __init__(
         self,
-        high: Union[numpy.ndarray, Scalar] = numpy.inf,
-        low: Union[numpy.ndarray, Scalar] = numpy.NINF,
+        high: Union[typing.Tensor, typing.Scalar] = numpy.inf,
+        low: Union[typing.Tensor, typing.Scalar] = numpy.NINF,
         shape: Optional[tuple] = None,
         dtype: Optional[type] = None,
     ):
@@ -25,12 +25,14 @@ class Bounds:
         Initialize a :class:`Bounds`.
 
         Args:
-            high: Higher value for the bound interval. If it is an scalar it will be applied to \
-                  all the coordinates of a target vector. If it is a vector, the bounds will be \
-                  checked coordinate-wise. It defines and closed interval.
-            low: Lower value for the bound interval. If it is an scalar it will be applied to \
-                  all the coordinates of a target vector. If it is a vector, the bounds will be \
-                  checked coordinate-wise. It defines and closed interval.
+            high: Higher value for the bound interval. If it is an typing.Scalar \
+                  it will be applied to all the coordinates of a target vector. \
+                  If it is a vector, the bounds will be checked coordinate-wise. \
+                  It defines and closed interval.
+            low: Lower value for the bound interval. If it is a typing.Scalar it \
+                 will be applied to all the coordinates of a target vector. \
+                 If it is a vector, the bounds will be checked coordinate-wise. \
+                 It defines and closed interval.
             shape: Shape of the array that will be bounded. Only needed if `high` and `low` are \
                    vectors and it is used to define the dimensions that will be bounded.
             dtype:  Data type of the array that will be bounded. It can be inferred from `high` \
@@ -45,7 +47,7 @@ class Bounds:
             >>> print(bounds)
             Bounds shape float64 dtype (3,) low [-1 -1 -1] high [1. 1. 1.]
 
-            Initializing :class:`Bounds` using  scalars:
+            Initializing :class:`Bounds` using  typing.Scalars:
 
             >>> import numpy
             >>> high, low, shape = 4, 2.1, (5,)
@@ -62,12 +64,12 @@ class Bounds:
         elif shape is None:
             raise TypeError("If shape is None high or low need to have .shape attribute.")
         # High and low will be arrays of target shape
-        if not isinstance(high, numpy.ndarray):
-            high = numpy.array(high) if isinstance(high, _Iterable) else numpy.ones(shape) * high
-        if not isinstance(low, numpy.ndarray):
-            low = numpy.array(low) if isinstance(low, _Iterable) else numpy.ones(shape) * low
-        self.high = high
-        self.low = low
+        if not _dtype.is_tensor(high):
+            high = tensor(high) if isinstance(high, _Iterable) else tensor.ones(shape) * high
+        if not _dtype.is_tensor(low):
+            low = tensor(low) if isinstance(low, _Iterable) else tensor.ones(shape) * low
+        self.high = tensor.astype(high, _dtype.float)
+        self.low = tensor.astype(low, _dtype.float)
         if dtype is not None:
             self.dtype = dtype
         elif hasattr(high, "dtype"):
@@ -121,13 +123,13 @@ class Bounds:
         for lo, hi in bounds:
             low.append(lo)
             high.append(hi)
-        low, high = numpy.array(low), numpy.array(high)
+        low, high = tensor(low, dtype=_dtype.float), tensor(high, dtype=_dtype.float)
         return Bounds(low=low, high=high)
 
     @staticmethod
     def get_scaled_intervals(
-        low: Union[numpy.ndarray, float, int], high: Union[numpy.ndarray, float, int], scale: float
-    ) -> Tuple[Union[numpy.ndarray, float], Union[numpy.ndarray, float]]:
+        low: Union[typing.Tensor, float, int], high: Union[typing.Tensor, float, int], scale: float
+    ) -> Tuple[Union[typing.Tensor, float], Union[typing.Tensor, float]]:
         """
         Scale the high and low vectors by an scale factor.
 
@@ -148,19 +150,20 @@ class Bounds:
             :class:`Bounds` instance.
 
         """
-        pct = scale - 1
-        big_scale = 1 + numpy.abs(pct)
-        small_scale = 1 - numpy.abs(pct)
+        pct = tensor(scale - 1)
+        big_scale = 1 + tensor.abs(pct)
+        small_scale = 1 - tensor.abs(pct)
+        zero = tensor.astype(tensor(0.0), low.dtype)
         if pct > 0:
-            xmin_scaled = numpy.where(low < 0, low * big_scale, low * small_scale)
-            xmax_scaled = numpy.where(high < 0, high * small_scale, high * big_scale)
+            xmin_scaled = tensor.where(low < zero, low * big_scale, low * small_scale)
+            xmax_scaled = tensor.where(high < zero, high * small_scale, high * big_scale)
         else:
-            xmin_scaled = numpy.where(low < 0, low * small_scale, low * small_scale)
-            xmax_scaled = numpy.where(high < 0, high * big_scale, high * small_scale)
+            xmin_scaled = tensor.where(low < zero, low * small_scale, low * small_scale)
+            xmax_scaled = tensor.where(high < zero, high * big_scale, high * small_scale)
         return xmin_scaled, xmax_scaled
 
     @classmethod
-    def from_array(cls, x: numpy.ndarray, scale: float = 1.0) -> "Bounds":
+    def from_array(cls, x: typing.Tensor, scale: float = 1.0) -> "Bounds":
         """
         Instantiate a bounds compatible for bounding the given array. It also allows to set a \
         margin for the high and low values.
@@ -189,11 +192,11 @@ class Bounds:
             Bounds shape float64 dtype (3,) low [ 0.5 -7.5  0.5] high [1.5 1.5 1.5]
 
         """
-        xmin, xmax = x.min(axis=0), x.max(axis=0)
+        xmin, xmax = tensor.min(x, axis=0), tensor.max(x, axis=0)
         xmin_scaled, xmax_scaled = cls.get_scaled_intervals(xmin, xmax, scale)
         return Bounds(low=xmin_scaled, high=xmax_scaled)
 
-    def clip(self, x: numpy.ndarray) -> numpy.ndarray:
+    def clip(self, x: typing.Tensor) -> typing.Tensor:
         """
         Clip the values of the target array to fall inside the bounds (closed interval).
 
@@ -204,9 +207,9 @@ class Bounds:
             Clipped numpy array with all its values inside the defined bounds.
 
         """
-        return numpy.clip(x, self.low, self.high)
+        return tensor.clip(tensor.astype(x, _dtype.float), self.low, self.high)
 
-    def points_in_bounds(self, x: numpy.ndarray) -> Union[numpy.ndarray, bool]:
+    def points_in_bounds(self, x: typing.Tensor) -> Union[typing.Tensor, bool]:
         """
         Check if the rows of the target array have all their coordinates inside \
         specified bounds.
@@ -220,13 +223,13 @@ class Bounds:
             Numpy array of booleans indicating if a row lies inside the bounds.
 
         """
-        match = self.clip(x) == x
-        return match.all(axis=1).flatten() if len(match.shape) > 1 else match.all()
+        match = self.clip(x) == tensor.astype(x, _dtype.float)
+        return match.all(1).flatten() if len(match.shape) > 1 else match.all()
 
     def safe_margin(
         self,
-        low: Union[numpy.ndarray, float] = None,
-        high: Optional[Union[numpy.ndarray, float]] = None,
+        low: Union[typing.Tensor, float] = None,
+        high: Optional[Union[typing.Tensor, float]] = None,
         scale: float = 1.0,
     ) -> "Bounds":
         """
@@ -256,7 +259,7 @@ class Bounds:
         xmin_scaled, xmax_scaled = self.get_scaled_intervals(xmin, xmax, scale)
         return Bounds(low=xmin_scaled, high=xmax_scaled)
 
-    def to_tuples(self) -> Tuple[Tuple[Scalar, Scalar], ...]:
+    def to_tuples(self) -> Tuple[Tuple[typing.Scalar, typing.Scalar], ...]:
         """
         Return a tuple of tuples containing the lower and higher bound for each \
         coordinate of the :class:`Bounds` shape.

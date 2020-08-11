@@ -4,6 +4,7 @@ from typing import Callable
 from numba import jit
 import numpy as np
 
+from fragile.backend import tensor
 from fragile.optimize.env import Bounds, Function
 
 """
@@ -13,30 +14,32 @@ https://en.wikipedia.org/wiki/Test_functions_for_optimization
 
 
 def sphere(x: np.ndarray) -> np.ndarray:
-    return np.sum(x ** 2, 1).flatten()
+    return tensor.sum(x ** 2, 1).flatten()
 
 
 def rastrigin(x: np.ndarray) -> np.ndarray:
     dims = x.shape[1]
     A = 10
-    result = A * dims + np.sum(x ** 2 - A * np.cos(2 * math.pi * x), 1)
+    result = A * dims + tensor.sum(x ** 2 - A * tensor.cos(2 * math.pi * x), 1)
     return result.flatten()
 
 
-def eggholder(tensor: np.ndarray) -> np.ndarray:
-    x, y = tensor[:, 0], tensor[:, 1]
-    first_root = np.sqrt(np.abs(x / 2.0 + (y + 47)))
-    second_root = np.sqrt(np.abs(x - (y + 47)))
-    result = -1 * (y + 47) * np.sin(first_root) - x * np.sin(second_root)
+def eggholder(x: np.ndarray) -> np.ndarray:
+    x, y = x[:, 0], x[:, 1]
+    first_root = tensor.sqrt(tensor.abs(x / 2.0 + (y + 47)))
+    second_root = tensor.sqrt(tensor.abs(x - (y + 47)))
+    result = -1 * (y + 47) * tensor.sin(first_root) - x * tensor.sin(second_root)
     return result
 
 
 def styblinski_tang(x) -> np.ndarray:
-    return np.sum(x ** 4 - 16 * x ** 2 + 5 * x, 1) / 2.0
+    return tensor.sum(x ** 4 - 16 * x ** 2 + 5 * x, 1) / 2.0
 
 
 def rosenbrock(x) -> np.ndarray:
-    return 100 * np.sum((x[:, :-2] ** 2 - x[:, 1:-1]) ** 2, 1) + np.sum((x[:, :-2] - 1) ** 2, 1)
+    return 100 * tensor.sum((x[:, :-2] ** 2 - x[:, 1:-1]) ** 2, 1) + tensor.sum(
+        (x[:, :-2] - 1) ** 2, 1
+    )
 
 
 @jit(nopython=True)
@@ -57,11 +60,14 @@ def _lennard_fast(state):
 
 def lennard_jones(x: np.ndarray) -> np.ndarray:
     result = np.zeros(x.shape[0])
+    x = tensor.to_numpy(x)
+    assert isinstance(x, np.ndarray)
     for i in range(x.shape[0]):
         try:
             result[i] = _lennard_fast(x[i])
         except ZeroDivisionError:
             result[i] = np.inf
+    result = tensor.as_tensor(result)
     return result
 
 
@@ -80,7 +86,7 @@ class OptimBenchmark(Function):
 
 
 class Sphere(OptimBenchmark):
-    benchmark = 0.0
+    benchmark = tensor(0.0)
 
     def __init__(self, dims: int, *args, **kwargs):
         super(Sphere, self).__init__(dims=dims, function=sphere, *args, **kwargs)
@@ -92,11 +98,11 @@ class Sphere(OptimBenchmark):
 
     @property
     def best_state(self):
-        return np.zeros(self.shape)
+        return tensor.zeros(self.shape)
 
 
 class Rastrigin(OptimBenchmark):
-    benchmark = 0
+    benchmark = tensor(0.0)
 
     def __init__(self, dims: int, *args, **kwargs):
         super(Rastrigin, self).__init__(dims=dims, function=rastrigin, *args, **kwargs)
@@ -108,23 +114,23 @@ class Rastrigin(OptimBenchmark):
 
     @property
     def best_state(self):
-        return np.zeros(self.shape)
+        return tensor.zeros(self.shape)
 
 
 class EggHolder(OptimBenchmark):
-    benchmark = -959.64066271
+    benchmark = tensor(-959.64066271)
 
     def __init__(self, dims: int = None, *args, **kwargs):
         super(EggHolder, self).__init__(dims=2, function=eggholder, *args, **kwargs)
 
     @staticmethod
     def get_bounds(dims=None):
-        bounds = [(-512, 512), (-512, 512)]
+        bounds = [(-512.0, 512.0), (-512.0, 512.0)]
         return Bounds.from_tuples(bounds)
 
     @property
     def best_state(self):
-        return np.array([512.0, 404.2319])
+        return tensor([512.0, 404.2319])
 
 
 class StyblinskiTang(OptimBenchmark):
@@ -138,11 +144,11 @@ class StyblinskiTang(OptimBenchmark):
 
     @property
     def best_state(self):
-        return np.ones(self.shape) * -2.903534
+        return tensor.ones(self.shape) * -2.903534
 
     @property
     def benchmark(self):
-        return -39.16617 * self.shape[0]
+        return tensor(-39.16617 * self.shape[0])
 
 
 class Rosenbrock(OptimBenchmark):
@@ -156,11 +162,11 @@ class Rosenbrock(OptimBenchmark):
 
     @property
     def best_state(self):
-        return np.ones(self.shape)
+        return tensor.ones(self.shape)
 
     @property
     def benchmark(self):
-        return 0.0
+        return tensor(0.0)
 
 
 class LennardJones(OptimBenchmark):

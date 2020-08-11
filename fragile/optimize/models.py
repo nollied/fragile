@@ -1,5 +1,6 @@
 import numpy
 
+from fragile.backend import random_state
 from fragile.core.models import NormalContinuous
 from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 
@@ -63,7 +64,7 @@ class ESModel(NormalContinuous):
 
         """
         # There is a chance of performing a gaussian perturbation
-        if numpy.random.random() < self.random_step_prob:
+        if random_state.random() < self.random_step_prob:
             return super(ESModel, self).sample(
                 batch_size=batch_size, env_states=env_states, model_states=model_states, **kwargs,
             )
@@ -81,7 +82,7 @@ class ESModel(NormalContinuous):
         proposal = best + self.recombination * (observs[a_rand] - observs[b_rand])
         # Randomly mutate each coordinate of the original vector
         assert observs.shape == proposal.shape
-        rands = numpy.random.random(observs.shape)
+        rands = random_state.random(observs.shape)
         perturbations = numpy.where(rands < self.mutation, observs, proposal)
         # The Environment will sum the observations to perform the step
         new_states = perturbations - observs
@@ -242,8 +243,6 @@ class CMAES(NormalContinuous):
             eigvals, eigvects = numpy.linalg.eig(self.cov_matrix)
             self.scaling_diag = numpy.diag(eigvals)  # [::-1])
             self.coords_matrix = eigvects  # [:, ::-1]
-            assert numpy.abs(numpy.imag(self.coords_matrix).sum()) == 0, self.coords_matrix
-            assert numpy.abs(numpy.imag(self.scaling_diag).sum()) == 0, self.scaling_diag
             self.scaling_diag = numpy.sqrt(numpy.diag(self.scaling_diag)).reshape(-1, 1)
             self.invsqrtC = numpy.matmul(
                 numpy.matmul(self.coords_matrix, numpy.diag(self.scaling_diag.flatten() ** -1)),

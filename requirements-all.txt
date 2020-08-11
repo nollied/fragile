@@ -27,7 +27,6 @@ psycopg2-binary==2.8.4
 pyarrow==0.16.0
 pytest==5.4.1
 pyvirtualdisplay==0.2.5
-PyYAML==5.3.1
 scikit-learn==0.22.2.post1
 scipy==1.4.1
 selenium==3.141.0
