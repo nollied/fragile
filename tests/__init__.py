@@ -1,4 +1,7 @@
+import os
 import warnings
+
+IN_CI = bool(os.getenv("CI", False))
 
 warnings.filterwarnings(
     "ignore",

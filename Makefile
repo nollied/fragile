@@ -2,6 +2,7 @@ current_dir = $(shell pwd)
 
 PROJECT = fragile
 VERSION ?= latest
+CI = false
 
 .POSIX:
 .POSIX:
@@ -19,7 +20,7 @@ test:
 .PHONY: docker-test
 docker-test:
 	find -name "*.pyc" -delete
-	docker run --rm -it --network host -w /fragile --entrypoint python3 fragiletech/fragile:${VERSION} -m pytest
+	docker run --rm -it --network host -w /fragile --env CI=true --entrypoint python3 fragiletech/fragile:${VERSION} -m pytest
 
 
 .PHONY: docker-build
