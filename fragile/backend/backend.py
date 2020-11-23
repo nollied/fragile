@@ -159,3 +159,15 @@ class Backend:
     @classmethod
     def use_backend(cls, name=None, device=None, use_grad=None):
         return _use_backend(cls, name=name, device=device, use_grad=use_grad)
+
+
+def load_backend_config(filepath=config_file):
+    with open(filepath, "r") as stream:
+        config = yaml.safe_load(stream)
+    backend = config["default_backend"]
+    device = config["default_device"]
+    if device == "auto":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    use_grad = config["default_grad"]
+    true_hash = config["true_hash"]
+    return backend, device, use_grad, true_hash
