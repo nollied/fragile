@@ -1,4 +1,4 @@
-FROM fragiletech/deep-learning-py3.7:v0.0.1
+FROM fragiletech/ubuntu20.04-cuda-11.0-py38
 ARG JUPYTER_PASSWORD=fragile
 ENV BROWSER=/browser \
     LC_ALL=en_US.UTF-8

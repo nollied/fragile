@@ -7,6 +7,7 @@ import holoviews
 import pytest
 
 from fragile.dataviz.plot_saver import PlotSaver
+from tests import IN_CI
 from tests.dataviz.test_swarm_viz import swarm_dict, swarm_names, backends
 
 
@@ -35,6 +36,7 @@ class TestPlotSaver:
             assert len(epoch) == 5
             assert int(epoch) == plot_saver.epoch
 
+    @pytest.mark.skipif(IN_CI, reason="Need geckodriver. Skipping until fixed.")
     def test_run_step(self, plot_saver):
         with tempfile.TemporaryDirectory() as tmpdirname:
             with warnings.catch_warnings():
