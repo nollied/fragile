@@ -33,5 +33,5 @@ scikit-learn==0.24.1
 scipy==1.5.4
 selenium==3.141.0
 setproctitle==1.1.10
-streamz==0.6.1
+streamz==0.6.2
 xxhash==2.0.0
