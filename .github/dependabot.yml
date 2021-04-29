@@ -1,0 +1,36 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: weekly
+    time: "04:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: setuptools
+    versions:
+    - 53.0.0
+    - 54.1.2
+    - 54.2.0
+  - dependency-name: ipython
+    versions:
+    - 7.20.0
+    - 7.21.0
+  - dependency-name: matplotlib
+    versions:
+    - 3.3.4
+  - dependency-name: pandas
+    versions:
+    - 1.2.2
+  - dependency-name: pyvirtualdisplay
+    versions:
+    - "2.0"
+  - dependency-name: ray
+    versions:
+    - 1.1.0
+  - dependency-name: pytest
+    versions:
+    - 6.2.2
+  - dependency-name: holoviews
+    versions:
+    - 1.14.1
