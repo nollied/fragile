@@ -12,7 +12,7 @@ hvplot==0.7.0
 hypothesis==5.41.3
 judo==0.0.6
 jupyter==1.0.0
-matplotlib==3.3.3
+matplotlib==3.4.2
 networkx==2.5
 numba==0.51.2
 numpy==1.19.4

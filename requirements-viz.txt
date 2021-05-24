@@ -1,7 +1,7 @@
 bokeh==2.2.3
 holoviews==1.13.5
 hvplot==0.7.0
-matplotlib==3.3.3
+matplotlib==3.4.2
 panel==0.10.2
 param==1.10.0
 plotly==4.12.0
