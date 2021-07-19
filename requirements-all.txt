@@ -1,5 +1,5 @@
 Cython>=0.29.16,<1.0; python_version == '3.7'
-setuptools==50.3.2
+setuptools==57.4.0
 gym==0.17.3
 git+https://github.com/FragileTech/atari-py.git#egg=atari-py
 attrs==20.3.0
