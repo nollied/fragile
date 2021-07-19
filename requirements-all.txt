@@ -7,7 +7,7 @@ bokeh==2.2.3
 ez_setup==0.9
 gym-retro==0.8.0
 h5py==3.1.0
-holoviews==1.13.5
+holoviews==1.14.5
 hvplot==0.7.0
 hypothesis==5.41.3
 judo==0.0.6
