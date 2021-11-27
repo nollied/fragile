@@ -12,6 +12,7 @@ hvplot==0.7.0
 hypothesis==5.41.3
 judo==0.0.6
 jupyter==1.0.0
+llvmlite==0.37.0
 matplotlib==3.3.3
 networkx==2.5
 numba==0.51.2
