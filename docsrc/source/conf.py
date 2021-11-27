@@ -37,6 +37,7 @@ author = "Guillem Duran, Sergio Hernandez"
 # The short X.Y version
 from fragile import __version__
 
+
 version = __version__
 # The full version, including alpha/beta/rc tags
 release = __version__

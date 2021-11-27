@@ -234,7 +234,8 @@ class RayEnv(CoreEnv):
 
         """
         transition_data_id = self._remote_env.states_to_data.remote(
-            model_states=model_states, env_states=env_states
+            model_states=model_states,
+            env_states=env_states,
         )
         """if not isinstance(transition_data, (dict, tuple)):
             raise ValueError(
@@ -279,7 +280,11 @@ class RayEnv(CoreEnv):
         return results_ids
 
     async def reset(
-        self, batch_size: int = 1, env_states: StatesEnv = None, *args, **kwargs
+        self,
+        batch_size: int = 1,
+        env_states: StatesEnv = None,
+        *args,
+        **kwargs,
     ) -> Tuple:
         """
         Reset the environment to the start of a new episode and returns a new \
@@ -304,6 +309,9 @@ class RayEnv(CoreEnv):
         ]
         await asyncio.gather(*reset_ids)
         env_state = self._local_env.reset(
-            batch_size=batch_size, env_states=env_states, *args, **kwargs
+            batch_size=batch_size,
+            env_states=env_states,
+            *args,
+            **kwargs,
         )
         return env_state

@@ -1,3 +1,4 @@
+"""Implementation of the export swarm algorithm."""
 from collections import deque
 from typing import Tuple
 

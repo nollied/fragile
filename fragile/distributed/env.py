@@ -368,10 +368,7 @@ class _ParallelEnvironment:
 
 
 class ParallelEnv(EnvWrapper):
-    """
-    Make the transitions of an :class:`Environment` in parallel using the \
-    multiprocessing library.
-    """
+    """Step an :class:`Environment` in parallel using the ``multiprocessing`` library."""
 
     def __init__(
         self,
@@ -521,7 +518,8 @@ class RayEnv(EnvWrapper):
         self._distribute_name = distribute if distribute is not None else {}
         self.envs: List[RemoteEnvironment] = [
             RemoteEnvironment.options(**options).remote(
-                env_callable=env_callable, env_kwargs=env_kwargs,
+                env_callable=env_callable,
+                env_kwargs=env_kwargs,
             )
             for _ in range(n_workers)
         ]
@@ -585,8 +583,9 @@ class RayEnv(EnvWrapper):
 
     def make_transitions(self, *args, **kwargs):
         """
-        Forward the make_transitions arguments to the parallel environments \
-        splitting them in batches of similar size.
+        Forward the make_transitions arguments to the parallel environments.
+
+        Split the states in batches of similar size.
         """
         chunk_data = self._split_inputs_in_chunks(*args, **kwargs)
         split_results = self._make_transitions(chunk_data)

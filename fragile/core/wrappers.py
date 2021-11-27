@@ -213,7 +213,9 @@ class EnvWrapper(BaseWrapper, Environment):
 
     def step(self, model_states: StatesModel, env_states: StatesEnv) -> StatesEnv:
         return self.unwrapped.__class__.step(
-            self.unwrapped, model_states=model_states, env_states=env_states,
+            self.unwrapped,
+            model_states=model_states,
+            env_states=env_states,
         )
 
     def make_transitions(self, *args, **kwargs) -> Dict[str, judo.typing.Tensor]:

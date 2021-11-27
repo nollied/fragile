@@ -690,7 +690,7 @@ class GridLandscape(SwarmLandscape):
                 [
                     swarm.swarm.critic.memory[ix[0], ix[1]].astype(numpy.float32)
                     for ix in memory_values.astype(int)
-                ]
+                ],
             )
         else:
             memory_values = numpy.arange(grid.shape[0])

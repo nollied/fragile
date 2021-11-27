@@ -64,10 +64,10 @@ application_import_names = ["fragile"]
 extended_default_ignore=[]
 
 [tool.flakehell.plugins]
-"flake8*" = ["+*"]
-pylint = ["+*"]
-pyflakes = ["+*"]
-pycodestyle = ["+*" , "-D100", "-D104", "-D301", "-W503", "-W504"]
+"flake8*" = ["+*", "-D*"]
+pylint = ["+*", "-D*"]
+pyflakes = ["+*", "-D*"]
+pycodestyle = ["+*" , "-D100", "-D104", "-D301", "-W503", "-W504", "-D*"]
 
 [tool.flakehell.exceptions."**/__init__.py"]
 pyflakes = ["-F401"]
@@ -78,6 +78,18 @@ pycodestyle = ["-D*"]
 "flake8*" = ["-D*"]
 pylint = ["-D*"]
 pyflakes = ["-F401", "-F811"]
+
+[tool.flakehell.exceptions."**/core/wrappers.py"]
+pycodestyle = ["-D*"]
+"flake8*" = ["-D*"]
+pylint = ["-D*"]
+pyflakes = ["-D*"]
+
+[tool.flakehell.exceptions."**/optimize/benchmarks.py"]
+pycodestyle = ["-D*"]
+"flake8*" = ["-D*"]
+pylint = ["-D*"]
+pyflakes = ["-D*"]
 
 [tool.pylint.master]
 ignore = 'tests'

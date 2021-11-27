@@ -1,3 +1,4 @@
+"""Classes for implementing several :class:`Swarm` that run in parallel and exchange walkers."""
 from typing import Callable
 
 import numpy
@@ -81,6 +82,7 @@ class DistributedExport:
         self._epoch = 0
 
     def __getattr__(self, item):
+        """Get the remote value from the ray cluster."""
         return ray.get(self.swarms[0].get.remote(item))
 
     @property

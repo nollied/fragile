@@ -1,3 +1,4 @@
+"""Ray remote implementation of the export swarm algorithm."""
 from typing import Callable
 
 from fragile.distributed.export_swarm import (

@@ -1,3 +1,4 @@
+"""Data structure to keep track of the graph that stores all the states visited by a Swarm."""
 from typing import List, Tuple
 
 import judo
@@ -37,8 +38,11 @@ class HistoryTree(JudoTree):
     """
 
     def get_states_ids(
-        self, walkers_states: StatesWalkers, **kwargs,
+        self,
+        walkers_states: StatesWalkers,
+        **kwargs,
     ) -> Tuple[Tensor, StatesWalkers]:
+        """Get the id of the nodes corresponding to the walkers states."""
         leaf_ids = judo.to_numpy(walkers_states.get("id_walkers"))
         return leaf_ids, walkers_states
 
