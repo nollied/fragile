@@ -3,6 +3,7 @@ import warnings
 
 
 IN_CI = bool(os.getenv("CI", False))
+DISABLE_DISTRIBUTED = bool(os.getenv("DISABLE_DISTRIBUTED", False))
 
 warnings.filterwarnings(
     "ignore",

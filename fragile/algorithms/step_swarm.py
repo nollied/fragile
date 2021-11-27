@@ -2,7 +2,7 @@ import copy
 from typing import Any, Callable, List, Tuple
 
 import judo
-from judo import Backend, tensor
+from judo import Backend, dtype, tensor
 from judo.data_structures.tree import BaseTree
 import numpy
 
@@ -45,7 +45,7 @@ class StepStatesWalkers(StatesWalkers):
 
         """
         params_dict = super(StepStatesWalkers, self).get_params_dict()
-        step_params = {"init_actions": {"dtype": judo.float}, "init_dts": {"dtype": judo.float}}
+        step_params = {"init_actions": {"dtype": dtype.float}, "init_dts": {"dtype": dtype.float}}
         params_dict.update(step_params)
         if self.actions_shape is not None:
             params_dict["init_actions"]["size"] = self.actions_shape
@@ -224,7 +224,7 @@ class MajorityDiscreteModel(RootModel):
             will use to step the :env:`Environment`.
 
         """
-        init_actions = judo.astype(walkers.states.init_actions.flatten(), judo.int)
+        init_actions = judo.astype(walkers.states.init_actions.flatten(), dtype.int)
         init_actions = judo.to_numpy(init_actions)
         with Backend.use_backend("numpy"):
             y = numpy.bincount(init_actions)
@@ -232,11 +232,11 @@ class MajorityDiscreteModel(RootModel):
         most_used_action = tensor(most_used_action)
         root_model_states = StatesModel(
             batch_size=1,
-            state_dict={"actions": {"dtype": judo.int64}, "dt": {"dtype": judo.int64}},
+            state_dict={"actions": {"dtype": dtype.int64}, "dt": {"dtype": dtype.int64}},
         )
         root_model_states.actions[:] = most_used_action
         if hasattr(root_model_states, "dt"):
-            init_dts = judo.astype(walkers.states.init_dts.flatten(), judo.int)
+            init_dts = judo.astype(walkers.states.init_dts.flatten(), dtype.int)
             index_dt = init_actions == most_used_action
             target_dt = init_dts[index_dt].min()
             root_model_states.dt[:] = target_dt
@@ -271,15 +271,15 @@ class FollowBestModel(RootModel):
             will use to step the :env:`Environment`.
 
         """
-        init_actions = judo.astype(walkers.states.init_actions.flatten(), judo.int)
+        init_actions = judo.astype(walkers.states.init_actions.flatten(), dtype.int)
         best_ix = walkers.get_best_index()
         root_model_states = StatesModel(
             batch_size=1,
-            state_dict={"actions": {"dtype": judo.int64}, "dt": {"dtype": judo.int}},
+            state_dict={"actions": {"dtype": dtype.int64}, "dt": {"dtype": dtype.int}},
         )
         root_model_states.actions[:] = init_actions[best_ix]
         if hasattr(root_model_states, "dt"):
-            target_dt = judo.astype(walkers.states.init_dt.flatten(), judo.int)[best_ix]
+            target_dt = judo.astype(walkers.states.init_dt.flatten(), dtype.int)[best_ix]
             root_model_states.dt[:] = target_dt
         return root_model_states
 

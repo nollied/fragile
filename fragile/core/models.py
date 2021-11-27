@@ -1,7 +1,7 @@
 from typing import Optional, Union
 
 import judo
-from judo import Backend, Bounds, tensor
+from judo import Backend, Bounds, dtype, tensor
 from numba import jit
 
 from fragile.core.base_classes import BaseCritic, BaseModel
@@ -196,7 +196,7 @@ class _DtModel(Model):
             dict containing the parameters of both the :class:`Model` and its :class:`Critic`.
 
         """
-        dt = {"dt": {"dtype": judo.float32}, "critic_score": {"dtype": judo.int64}}
+        dt = {"dt": {"dtype": dtype.float32}, "critic_score": {"dtype": dtype.int64}}
         all_params = self.add_critic_params(params=dt, override_params=override_params)
         return all_params
 
@@ -239,7 +239,7 @@ class _DtModel(Model):
             )
             model_states.update(actions=actions, other=critic_states, dt=dt)
         else:
-            dt = judo.ones(batch_size, dtype=judo.int64)
+            dt = judo.ones(batch_size, dtype=dtype.int64)
             model_states.update(actions=actions, critic_score=dt, dt=dt, **kwargs)
         return model_states
 
@@ -276,7 +276,7 @@ class DiscreteModel(_DtModel):
     def get_params_dict(self, override_params: bool = True) -> StateDict:
         """Return the dictionary with the parameters to create a new `DiscreteUniform` model."""
         params = super(DiscreteModel, self).get_params_dict(override_params=override_params)
-        params.update({"actions": {"dtype": judo.int64}})
+        params.update({"actions": {"dtype": dtype.int64}})
         return params
 
 
@@ -343,7 +343,7 @@ class BinarySwap(DiscreteModel):
     def get_params_dict(self, override_params: bool = True) -> StateDict:
         """Return the dictionary with the parameters to create a new :class:`BinarySwap` model."""
         all_params = super(BinarySwap, self).get_params_dict(override_params=override_params)
-        actions = {"actions": {"dtype": judo.int64, "size": (self.n_actions,)}}
+        actions = {"actions": {"dtype": dtype.int64, "size": (self.n_actions,)}}
         all_params.update(actions)
         return all_params
 
@@ -383,10 +383,10 @@ class BinarySwap(DiscreteModel):
                 if env_states is not None
                 else judo.zeros((batch_size, self.n_actions))
             )
-            actions = judo.astype(actions, judo.bool)
+            actions = judo.astype(actions, dtype.bool)
 
             flips = self.random_state.randint(0, self.n_actions, size=(batch_size, self.n_swaps))
-            actions = judo.astype(flip_values(actions, flips), judo.int64)
+            actions = judo.astype(flip_values(actions, flips), dtype.int64)
         actions = tensor(actions)
         return self.update_states_with_critic(
             actions=actions,
@@ -440,7 +440,7 @@ class ContinuousModel(_DtModel):
     def get_params_dict(self, override_params: bool = True) -> StateDict:
         """Return the dictionary with the parameters to create a new `DiscreteUniform` model."""
         all_params = super(ContinuousModel, self).get_params_dict(override_params=override_params)
-        actions = {"actions": {"size": self.shape, "dtype": judo.float}}
+        actions = {"actions": {"size": self.shape, "dtype": dtype.float32}}
         all_params.update(actions)
         return all_params
 

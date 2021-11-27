@@ -1,9 +1,9 @@
 import sys
 
+from flogging import setup as setup_logging
+from judo import Backend
 from plangym import AtariEnvironment
 
-from fragile.backend import Backend
-from fragile.backend.slogging import setup as setup_logging
 from fragile.core import DiscreteEnv, GaussianDt, HistoryTree, NormalContinuous, Swarm
 from fragile.distributed.env import ParallelEnv
 from fragile.optimize.benchmarks import EggHolder

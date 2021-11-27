@@ -1,7 +1,7 @@
 from typing import Callable
 
 import judo
-from judo import Backend, Bounds, functions, tensor
+from judo import Backend, Bounds, dtype, functions, tensor
 import pytest
 
 from fragile.core.states import StatesEnv, StatesModel
@@ -23,13 +23,13 @@ def function() -> Function:
 
 
 def local_minimizer():
-    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=judo.float)
+    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
     env = Function(function=sphere, bounds=bounds)
     return MinimizerWrapper(env)
 
 
 def custom_domain_function():
-    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=judo.float)
+    bounds = Bounds(shape=(2,), high=10, low=-5, dtype=dtype.float)
     env = Function(
         function=sphere, bounds=bounds, custom_domain_check=lambda x, *args: judo.norm(x, 1) < 5.0
     )
@@ -39,19 +39,19 @@ def custom_domain_function():
 def create_env_and_model_states(name="classic") -> Callable:
     def _function():
         env = function()
-        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
     def _local_minimizer():
         env = local_minimizer()
-        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
     def _custom_domain_function():
         env = custom_domain_function()
-        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         return env, states
 
@@ -141,7 +141,7 @@ class TestFunction:
     @pytest.mark.skipif(not Backend.is_numpy(), reason="only in numpy for now")
     def test_minimizer_step(self):
         minim = local_minimizer()
-        params = {"actions": {"dtype": judo.float64, "size": (2,)}}
+        params = {"actions": {"dtype": dtype.float64, "size": (2,)}}
         states = StatesModel(state_dict=params, batch_size=N_WALKERS)
         assert minim.shape == minim.shape
         states = minim.step(model_states=states, env_states=minim.reset(N_WALKERS))

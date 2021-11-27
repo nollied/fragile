@@ -14,7 +14,7 @@ with open(Path(__file__).with_name("README.md"), encoding="utf-8") as f:
 
 # Module-specific dependencies.
 extras = {
-    "atari": ["atari-py==0.1.1", "opencv-python", "gym", "pillow-simd", "plangym>=0.0.7"],
+    "atari": ["atari-py==0.1.1", "opencv-python", "gym==0.17.3", "pillow-simd", "plangym>=0.0.8"],
     "dataviz": [
         "matplotlib",
         "bokeh>2.0.0",
@@ -28,7 +28,7 @@ extras = {
         "selenium",
         "pyarrow",
     ],
-    "test": ["pytest>=5.3.5", "hypothesis==5.6.0"],
+    "test": ["pytest>=5.3.5", "hypothesis>=5.6.0"],
     "ray": ["ray>=1.0.1.post1", "setproctitle"],
 }
 
@@ -51,14 +51,16 @@ setup(
     tests_require=["pytest>=5.3.5", "hypothesis>=5.6.0"],
     extras_require=extras,
     install_requires=[
+        "flogging",
+        "judo>=0.0.7",
         "networkx",
         "numba",
         "numpy",
         "scipy",
+        "plangym>=0.0.11",
         "PyYAML",
         "xxhash",
         "tqdm",
-        "judo>=0.0.6",
     ],
     package_data={"": ["README.md"]},
     classifiers=[

@@ -4,7 +4,11 @@ import numpy
 import pytest
 
 from fragile.distributed.export_swarm import ExportedWalkers, ExportSwarm, ParamServer
-from tests.core.test_swarm import create_cartpole_swarm, TestSwarm
+from tests import DISABLE_DISTRIBUTED
+
+
+if not DISABLE_DISTRIBUTED:
+    from tests.core.test_swarm import create_cartpole_swarm, TestSwarm
 
 
 class ExportDummy(ExportSwarm):
@@ -64,7 +68,7 @@ def swarm_with_score(request):
     return swarm, score
 
 
-# @pytest.mark.skipif(True, reason="debug")
+@pytest.mark.skipif(DISABLE_DISTRIBUTED, reason="debug")
 class TestExportedSwarm:
     swarm_params = (
         {"export_best": False},

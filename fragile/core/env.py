@@ -2,7 +2,7 @@
 from typing import Dict, Union
 
 import judo
-from judo import Backend, tensor
+from judo import Backend, dtype, tensor
 
 from fragile.core.base_classes import BaseEnvironment
 from fragile.core.states import StatesEnv, StatesModel
@@ -21,7 +21,7 @@ class Environment(BaseEnvironment):
         self,
         states_shape: tuple,
         observs_shape: tuple,
-        states_dtype: type = judo.float64,
+        states_dtype: type = dtype.float64,
     ):
         """
         Initialize an :class:`Environment`.
@@ -61,11 +61,11 @@ class Environment(BaseEnvironment):
         """
         params = {
             "states": {"size": self.states_shape, "dtype": self._states_dtype},
-            "observs": {"size": self.observs_shape, "dtype": judo.float32},
-            "rewards": {"dtype": judo.float32},
-            "times": {"dtype": judo.float32},
-            "oobs": {"dtype": judo.bool},
-            "terminals": {"dtype": judo.bool},
+            "observs": {"size": self.observs_shape, "dtype": dtype.float32},
+            "rewards": {"dtype": dtype.float32},
+            "times": {"dtype": dtype.float32},
+            "oobs": {"dtype": dtype.bool},
+            "terminals": {"dtype": dtype.bool},
         }
         return params
 
@@ -81,13 +81,13 @@ class Environment(BaseEnvironment):
     ) -> StatesEnv:
         """Return a new :class:`StatesEnv` object containing the data generated \
         by the environment."""
-        oobs = tensor(oobs, dtype=judo.bool)
+        oobs = tensor(oobs, dtype=dtype.bool)
         terminals = (
-            tensor(oobs, dtype=judo.bool)
+            tensor(oobs, dtype=dtype.bool)
             if terminals is not None
-            else judo.zeros(len(oobs), dtype=judo.bool)
+            else judo.zeros(len(oobs), dtype=dtype.bool)
         )
-        rewards = tensor(rewards, dtype=judo.float32)
+        rewards = tensor(rewards, dtype=dtype.float32)
         observs = tensor(observs)
         try:
             states = tensor(states)
@@ -114,7 +114,7 @@ class DiscreteEnv(Environment):
     """
 
     # fmt: off
-    def __init__(self, env: "plangym.core.GymEnvironment", states_dtype: type = judo.float64):  # noqa: F821 E501 fmt: on
+    def __init__(self, env: "plangym.core.GymEnvironment", states_dtype: type = dtype.float64):  # noqa: F821 E501 fmt: on
         """
         Initialize a :class:`DiscreteEnv`.
 
@@ -168,7 +168,7 @@ class DiscreteEnv(Environment):
             ``{"states": np.array, "actions": np.array, "dt": np.array/int}``
 
         """
-        actions = judo.astype(model_states.actions, judo.int32)
+        actions = judo.astype(model_states.actions, dtype.int32)
         dt = model_states.dt if hasattr(model_states, "dt") else 1
         data = {"states": env_states.states, "actions": actions, "dt": dt}
         return data
@@ -213,12 +213,12 @@ class DiscreteEnv(Environment):
         with Backend.use_backend("numpy"):
             state, obs = self._env.reset()
             states = tensor([state.copy() for _ in range(batch_size)]).copy()
-            observs = tensor([obs.copy() for _ in range(batch_size)]).copy().astype(judo.float32)
+            observs = tensor([obs.copy() for _ in range(batch_size)]).copy().astype(dtype.float32)
         # observs = tensor(observs)
         # states = tensor(states)
-        rewards = judo.zeros(batch_size, dtype=judo.float32)
+        rewards = judo.zeros(batch_size, dtype=dtype.float32)
         times = judo.zeros_like(rewards)
-        oobs = judo.zeros(batch_size, dtype=judo.bool)
+        oobs = judo.zeros(batch_size, dtype=dtype.bool)
         new_states = self.states_from_data(
             batch_size=batch_size,
             states=states,

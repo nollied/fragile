@@ -1,6 +1,7 @@
 from typing import Optional
 
 import judo
+from judo import dtype
 
 from fragile.core.base_classes import BaseCritic
 from fragile.core.states import States, StatesEnv, StatesModel, StatesWalkers
@@ -29,7 +30,7 @@ class BaseDtSampler(BaseCritic):
             discrete_values: If ``True`` return discrete time step values. If \
                             ``False`` allow to return floating point time steps.
         """
-        self._dtype = judo.float if not discrete_values else int
+        self._dtype = dtype.float if not discrete_values else int
         super(BaseDtSampler, self).__init__()
 
     def get_params_dict(self) -> StateDict:

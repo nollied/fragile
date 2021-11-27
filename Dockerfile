@@ -16,7 +16,7 @@ RUN cd fragile \
     && python3 -m pip install -U pip \
     && pip3 install -r requirements-lint.txt  \
     && pip3 install -r requirements-test.txt  \
-    && pip3 install -r requirements.txt  \
+    && pip3 install -r requirements-all.txt  \
     && pip install ipython jupyter \
     && pip3 install -e . \
     && git config --global init.defaultBranch master \

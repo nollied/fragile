@@ -55,7 +55,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'Bump version')"
     strategy:
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9']
+        python-version: ['3.7', '3.8', '3.9']
     steps:
     - name: actions/checkout
       uses: actions/checkout@v2
@@ -72,13 +72,14 @@ jobs:
     - name: Install test and package dependencies
       run: |
         set -x
-        pip install -r requirements-test.txt -r requirements.txt
+        python -m pip install -U pip wheel
+        pip install -r requirements-test.txt -r requirements.txt -r requirements-all.txt
         pip install .
 
     - name: Test with pytest
       run: |
         set -x
-        make test-codecov
+        CI=True n=1 make test-codecov
 
     - name: Upload coverage report
       if: ${{ matrix.python-version=='3.8' }}
@@ -158,7 +159,8 @@ jobs:
         run: |
           set -x
           rm -rf $PROJECT_DIR
-          make test
+          pip install -r requirements-test.txt -r requirements-all.txt
+          CI=True make test
 
   bump-version:
     name: Bump package version

@@ -18,10 +18,20 @@ check:
 	pylint ${PROJECT}
 	black --check ${PROJECT}
 
+.PHONY: test-parallel
+test-parallel:
+	find -name "*.pyc" -delete
+	DISABLE_DISTRIBUTED=True pytest -n $n -s -o log_cli=true -o log_cli_level=info
+
+.PHONY: test-distributed
+test-distributed:
+	find -name "*.pyc" -delete
+	pytest tests/distributed -n 1 -s -o log_cli=true -o log_cli_level=info
+
 .PHONY: test
 test:
-	find -name "*.pyc" -delete
-	pytest -n $n -s -o log_cli=true -o log_cli_level=info
+	make test-parallel
+	make test-distributed
 
 .PHONY: test-codecov
 test-codecov:
@@ -58,7 +68,8 @@ docker-build:
 .PHONY: docker-test
 docker-test:
 	find -name "*.pyc" -delete
-	docker run --rm --network host -w /${PROJECT} --entrypoint python3 ${DOCKER_ORG}/${PROJECT}:${VERSION} -m pytest -n $n -s -o log_cli=true -o log_cli_level=info
+	docker run --rm --network host -w /${PROJECT} -e CI=True -e DISABLE_DISTRIBUTED=True --entrypoint python3 ${DOCKER_ORG}/${PROJECT}:${VERSION} -m pytest -n $n -s -o log_cli=true -o log_cli_level=info
+	docker run --rm --network host -w /${PROJECT} -e CI=True  --entrypoint python3 ${DOCKER_ORG}/${PROJECT}:${VERSION} -m pytest tests/distributed -n 1 -s -o log_cli=true -o log_cli_level=info
 
 .PHONY: docker-push
 docker-push:

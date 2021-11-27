@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Tuple, Union
 
-import judo
-from judo import random_state
+from judo import dtype, random_state
 
 from fragile.core.states import OneWalker, States, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.typing import StateDict, Tensor
@@ -91,7 +90,7 @@ class BaseCritic(StatesOwner):
         will be accessed using the name_1 attribute of the class.
         """
         state_dict = {
-            "critic_score": {"size": tuple([1]), "dtype": judo.float32},
+            "critic_score": {"size": tuple([1]), "dtype": dtype.float32},
         }
         return state_dict
 

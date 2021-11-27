@@ -1,9 +1,9 @@
 from typing import Callable, Tuple
-import warnings
 
 import judo
 from judo import dtype
-from plangym import AtariEnvironment, ClassicControl
+from plangym.atari import AtariEnvironment
+from plangym.classic_control import ClassicControl
 import pytest
 
 from fragile.core.env import DiscreteEnv, Environment
