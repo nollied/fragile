@@ -1,28 +1,30 @@
-FROM fragiletech/ubuntu20.04-cuda-11.0-py38
-ARG JUPYTER_PASSWORD=fragile
+FROM ubuntu:20.04
+ARG JUPYTER_PASSWORD="fragile"
 ENV BROWSER=/browser \
-    LC_ALL=en_US.UTF-8
-COPY requirements-all.txt fragile/requirements-all.txt
-
-# Install Python packages
-RUN pip3 install -U pip && \
-    cd fragile && \
-    pip3 install --no-cache-dir -r requirements-all.txt --no-use-pep517 && \
-    python3 -c "import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot"
-
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8
+COPY Makefile.docker Makefile
 COPY . fragile/
 
-RUN cd fragile && pip3 install -e .["all"] --no-use-pep517
+RUN apt-get update && \
+	apt-get install -y --no-install-suggests --no-install-recommends make cmake && \
+    make install-python3.8 && \
+    make install-common-dependencies && \
+    make install-python-libs
 
-# Remove dev packages
-RUN pip3 uninstall -y cython && \
-    apt-get remove -y cmake pkg-config flex bison curl libpng-dev \
-        libjpeg-turbo8-dev zlib1g-dev libhdf5-dev libopenblas-dev gfortran \
-        libfreetype6-dev libjpeg8-dev libffi-dev && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN cd fragile \
+    && python3 -m pip install -U pip \
+    && pip3 install -r requirements-lint.txt  \
+    && pip3 install -r requirements-test.txt  \
+    && pip3 install -r requirements.txt  \
+    && pip install ipython jupyter \
+    && pip3 install -e . \
+    && git config --global init.defaultBranch master \
+    && git config --global user.name "Whoever" \
+    && git config --global user.email "whoever@fragile.tech"
 
-RUN mkdir -p /root/.jupyter && \
+RUN make remove-dev-packages
+
+RUN mkdir /root/.jupyter && \
     echo 'c.NotebookApp.token = "'${JUPYTER_PASSWORD}'"' > /root/.jupyter/jupyter_notebook_config.py
 CMD jupyter notebook --allow-root --port 8080 --ip 0.0.0.0

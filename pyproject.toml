@@ -1,12 +1,11 @@
-# NOTE: you have to use single-quoted strings in TOML for regular expressions.
-# It's the equivalent of r-strings in Python.  Multiline strings are treated as
-# verbose regular expressions by Black.  Use [ ] to denote a significant space
-# character.
+[build-system]
+requires = ["setuptools >= 50.3.2", "wheel >= 0.29.0"]
+build-backend = "setuptools.build_meta"
 
-# Example configuration for Black.
+# black is the tool to format the source code
 [tool.black]
 line-length = 99
-target-version = ['py34','py35','py36', 'py37', 'py38']
+target-version = ['py36', 'py37', 'py38']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -22,7 +21,21 @@ exclude = '''
   | dist
 )/
 '''
-# Code coverate config
+# isort orders and lints imports
+[tool.isort]
+profile = "black"
+line_length = 99
+multi_line_output = 3
+order_by_type = false
+force_alphabetical_sort_within_sections = true
+force_sort_within_sections = true
+combine_as_imports = true
+include_trailing_comma = true
+color_output = true
+lines_after_imports = 2
+honor_noqa = true
+
+# Code coverage config
 [tool.coverage.run]
 branch = true
 source = ["fragile"]
@@ -37,36 +50,34 @@ omit = ["tests/*"]
 # Flakehell config
 [tool.flakehell]
 # optionally inherit from remote config (or local if you want)
-#base = "https://raw.githubusercontent.com/life4/flakehell/master/pyproject.toml"
+base = "https://raw.githubusercontent.com/life4/flakehell/master/pyproject.toml"
 # specify any flake8 options. For example, exclude "example.py":
 exclude = [".git", "docs", ".ipynb*", "*.ipynb", ".pytest_cache"]
-# make output nice
-format = "grouped"
-max_line_length = 99
-# show line of source code in output
+format = "grouped" # make output nice
+max_line_length = 99 # show line of source code in output
 show_source = true
 inline_quotes='"'
 import_order_style = "appnexus"
 application_package_names = ["fragile"]
 application_import_names = ["fragile"]
+# Fix AttributeError: 'Namespace' object has no attribute 'extended_default_ignore'
+extended_default_ignore=[]
 
 [tool.flakehell.plugins]
-'flake8*' = ["-Q000", "+*", "-D*"]
-flake8-quotes = ["-Q000"]
-pycodestyle = ["+*" ,"-B008","-B301","-C815","-C816","-C812","-D100",
-    "-D105","-D200","-D202","-D301","-D402","-E121","-E123","-E126","-E203","-E226",
-    "-E24","-E704","-F821","-W503","-W504"]
+"flake8*" = ["+*"]
+pylint = ["+*"]
 pyflakes = ["+*"]
-pylint = ["+*" , "-D*"] # disable docs by default
+pycodestyle = ["+*" , "-D100", "-D104", "-D301", "-W503", "-W504"]
 
-# match by prefix
-[tool.flakehell.exceptions."**/tests/*"]
-pycodestyle = ["-F401", "-F811"] # disable a check
-pyflakes = ["-*"]           # disable a plugin
-
-[tool.flakehell.exceptions."**/__init__.py"]  # Allow unused imports in __init__ files
-pycodestyle = ["-F401", "-F811"]
+[tool.flakehell.exceptions."**/__init__.py"]
 pyflakes = ["-F401"]
+
+# No docs in the tests. No unused imports (otherwise pytest fixtures raise errors).
+[tool.flakehell.exceptions."**/tests/*"]
+pycodestyle = ["-D*"]
+"flake8*" = ["-D*"]
+pylint = ["-D*"]
+pyflakes = ["-F401", "-F811"]
 
 [tool.pylint.master]
 ignore = 'tests'
@@ -81,5 +92,3 @@ enable = """,
          missing-return-doc,
          """
 
-[build-system]
-requires = ["setuptools >= 50.3.2", "wheel", "importlib"]

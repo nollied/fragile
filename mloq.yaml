@@ -1,0 +1,117 @@
+globals:
+  project_name: fragile
+  default_branch: master
+  owner: FragileTech
+  author: Guillem Duran Ballester
+  email: info@fragile.tech
+  description: "Framework for developing FractalAI based algorithms."
+  open_source: true
+  project_url: https://github.com/FragileTech/fragile
+
+license:
+  disable: false
+  license: MIT
+  copyright_year: 2018
+  copyright_holder: ${globals.owner}
+  open_source: ${globals.open_source}
+  project_name: ${globals.project_name}
+  email: ${globals.email}
+  project_url: ${globals.project_url}
+
+project:
+  disable: false
+  docker: false  # FIXME: depends on docker command
+  license: ${license.license}  # FIXME: depends on docker command
+  project_name: ${globals.project_name}
+  owner: ${globals.owner}
+  description: ${globals.description}
+  project_url: ${globals.project_url}
+  tests: true
+
+mlflow:
+  disable: true
+
+docs:
+  disable: false
+  project_name: ${globals.project_name}
+  description: ${globals.description}
+  author: ${globals.author}
+  copyright_holder: ${license.copyright_holder}
+  copyright_year: ${license.copyright_year}
+
+git:
+  disable: true
+  git_init: false
+  git_push: false
+  git_message: Generate project files with mloq
+  default_branch: ${globals.default_branch}
+  project_url: ${globals.project_url}
+
+package:
+  disable: False
+  open_source: ${globals.open_source}
+  project_name: ${globals.project_name}
+  description: ${globals.description}
+  default_branch: ${globals.default_branch}
+  project_url: ${globals.project_url}
+  owner: ${globals.owner}
+  author: ${globals.author}
+  email: ${globals.email}
+  license: ${license.license}
+  python_versions:
+  - '3.6'
+  - '3.7'
+  - '3.8'
+  - '3.9'
+  pyproject_extra: ""
+  license_classifier: "License :: OSI Approved :: MIT License"
+  pipenv: true
+
+requirements:
+  disable: false
+  requirements:
+    - dogfood
+
+lint:
+  disable: false
+  docstring_checks: true
+  pyproject_extra: ""
+  project_name: ${globals.project_name}
+  makefile: true
+
+docker:
+  disable: false
+  cuda: false
+  cuda_image_type: "cudnn8-runtime-ubuntu20.04"
+  cuda_version: "11.2"
+  python_version: "3.8"
+  ubuntu_version: "20.04"
+  base_image: "ubuntu:20.04"  # Replace with ??? when bug is fixed
+  test: true
+  lint: true
+  jupyter: true
+  jupyter_password: ${globals.project_name}
+  project_name: ${globals.project_name}
+  docker_org: fragiletech #${globals.owner}
+  requirements: ${requirements.requirements}
+  extra: ""
+  makefile: true
+
+ci:
+  bot_name: fragile-bot
+  bot_email: bot@fragile.tech
+  disable: false
+  vendor: github
+  ci_python_version: '3.8'
+  ubuntu_version: ubuntu-20.04
+  open_source: ${globals.open_source}
+  project_name: ${globals.project_name}
+  default_branch: ${globals.default_branch}
+  owner: ${globals.owner}
+  author: ${globals.author}
+  email: ${globals.email}
+  project_url: ${globals.project_url}
+  docker_org: fragiletech
+  docker: true
+  python_versions: ${package.python_versions}
+  ci_extra: ""
