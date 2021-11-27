@@ -22,7 +22,7 @@ class Plot:
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`Plot`.
@@ -165,7 +165,7 @@ class Table(StreamingPlot):
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`Table`.
@@ -187,7 +187,10 @@ class Table(StreamingPlot):
         }
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(Table, self).__init__(
             stream=stream,
@@ -196,7 +199,7 @@ class Table(StreamingPlot):
             mpl_opts=mpl_opts,
             bokeh_opts=bokeh_opts,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def opts(self, *args, **kwargs):
@@ -234,7 +237,7 @@ class RGB(StreamingPlot):
         """
         plot_opts = self.update_kwargs(**kwargs)
         self.plot = self.plot.opts(
-            holoviews.opts.RGB(xaxis=xaxis, yaxis=yaxis, *args, **plot_opts)
+            holoviews.opts.RGB(xaxis=xaxis, yaxis=yaxis, *args, **plot_opts),
         )
 
 
@@ -280,7 +283,10 @@ class Curve(StreamingPlot):
         }
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(Curve, self).__init__(
             stream=get_stream,
@@ -299,7 +305,7 @@ class Curve(StreamingPlot):
         axiswise: bool = True,
         normalize: bool = True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -317,7 +323,7 @@ class Curve(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **kwargs
+                **kwargs,
             ),
             holoviews.opts.NdOverlay(
                 normalize=normalize,
@@ -359,7 +365,10 @@ class Histogram(StreamingPlot):
         default_bokeh_opts = {"shared_axes": False, "tools": ["hover"]}
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(Histogram, self).__init__(
             stream=Pipe,
@@ -395,7 +404,7 @@ class Histogram(StreamingPlot):
         axiswise: bool = True,
         normalize: bool = True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -413,7 +422,7 @@ class Histogram(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **kwargs
+                **kwargs,
             ),
             holoviews.opts.NdOverlay(
                 normalize=normalize,
@@ -423,7 +432,8 @@ class Histogram(StreamingPlot):
         )
 
     def get_plot_data(
-        self, data: numpy.ndarray
+        self,
+        data: numpy.ndarray,
     ) -> Tuple[
         Tuple[numpy.ndarray, numpy.ndarray],
         Tuple[Union[Scalar, None], Union[Scalar, None]],
@@ -481,10 +491,17 @@ class Bivariate(StreamingPlot):
         }
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(Bivariate, self).__init__(
-            stream=Pipe, plot=bivariate, data=data, bokeh_opts=bokeh_opts, mpl_opts=mpl_opts
+            stream=Pipe,
+            plot=bivariate,
+            data=data,
+            bokeh_opts=bokeh_opts,
+            mpl_opts=mpl_opts,
         )
 
     def opts(
@@ -496,7 +513,7 @@ class Bivariate(StreamingPlot):
         axiswise: bool = True,
         normalize: bool = True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -520,7 +537,7 @@ class Bivariate(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **kwargs
+                **kwargs,
             ),
             holoviews.opts.Scatter(
                 alpha=0.7,
@@ -530,7 +547,7 @@ class Bivariate(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **scatter_kwargs
+                **scatter_kwargs,
             ),
             holoviews.opts.NdOverlay(
                 normalize=normalize,
@@ -587,7 +604,10 @@ class Landscape2D(StreamingPlot):
         default_mpl_opts = {}
 
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(Landscape2D, self).__init__(
             stream=Pipe,
@@ -643,7 +663,7 @@ class Landscape2D(StreamingPlot):
         normalize: bool = True,
         cmap: str = "default",
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -681,7 +701,7 @@ class Landscape2D(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **kwargs
+                **kwargs,
             ),
             holoviews.opts.Contours(
                 cmap=["black"],
@@ -694,7 +714,7 @@ class Landscape2D(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **contours_kwargs
+                **contours_kwargs,
             ),
             holoviews.opts.Scatter(
                 alpha=0.7,
@@ -704,7 +724,7 @@ class Landscape2D(StreamingPlot):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **scatter_kwargs
+                **scatter_kwargs,
             ),
             holoviews.opts.NdOverlay(
                 normalize=normalize,

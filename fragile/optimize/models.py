@@ -22,7 +22,7 @@ class ESModel(NormalContinuous):
         recombination: float = 0.7,
         random_step_prob: float = 0.1,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`ESModel`.
@@ -96,7 +96,7 @@ class ESModel(NormalContinuous):
             model_states=model_states,
             env_states=env_states,
             walkers_states=walkers_states,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -173,7 +173,7 @@ class CMAES(NormalContinuous):
                 model_states=model_states,
                 env_states=env_states,
                 walkers_states=walkers_states,
-                **kwargs
+                **kwargs,
             )
         actions = (
             env_states.get("observs")
@@ -194,7 +194,10 @@ class CMAES(NormalContinuous):
 
         actions = self._sample_actions()
         return self.update_states_with_critic(
-            actions=actions, batch_size=batch_size, model_states=model_states, **kwargs
+            actions=actions,
+            batch_size=batch_size,
+            model_states=model_states,
+            **kwargs,
         )
 
     def _update_evolution_paths(self, actions):
@@ -202,17 +205,17 @@ class CMAES(NormalContinuous):
         self.x_mean = numpy.matmul(actions, self.weights_const)
         # Update evolution paths
         self.paths_sigma = (1 - self.cum_sigma_const) * self.paths_sigma + numpy.sqrt(
-            self.cum_sigma_const * (2 - self.cum_sigma_const) * self.mu_eff_const
+            self.cum_sigma_const * (2 - self.cum_sigma_const) * self.mu_eff_const,
         ) * numpy.matmul(self.invsqrtC, (self.x_mean - self.old_x_mean)) / self.sigma
         sqrt_term = numpy.sqrt(
-            1 - (1 - self.cum_sigma_const) ** (2 * self._count_eval / self.pop_size)
+            1 - (1 - self.cum_sigma_const) ** (2 * self._count_eval / self.pop_size),
         )
         self.hsig = float(
             numpy.linalg.norm(self.paths_sigma) / sqrt_term / self.chi_norm_const
-            < 1.4 + 2 / (self.n_dims + 1)
+            < 1.4 + 2 / (self.n_dims + 1),
         )
         self.paths_covm = (1 - self.cum_covm_const) * self.paths_covm + self.hsig * numpy.sqrt(
-            self.cum_covm_const * (2 - self.cum_covm_const) * self.mu_eff_const
+            self.cum_covm_const * (2 - self.cum_covm_const) * self.mu_eff_const,
         ) * (self.x_mean - self.old_x_mean) / self.sigma
 
     def _adapt_covariance_matrix(self, actions):
@@ -224,14 +227,15 @@ class CMAES(NormalContinuous):
             + (1 - self.hsig) * self.cum_covm_const * (2 - self.cum_covm_const) * self.cov_matrix
             + self.lr_mu_const
             * numpy.matmul(
-                numpy.matmul(self.artmp, numpy.diag(self.weights_const.flatten())), self.artmp.T
+                numpy.matmul(self.artmp, numpy.diag(self.weights_const.flatten())),
+                self.artmp.T,
             )
         )
 
     def _adapt_sigma(self):
         self.sigma = self.sigma * numpy.exp(
             (self.cum_sigma_const / self.damp_sigma_const)
-            * (numpy.linalg.norm(self.paths_sigma) / self.chi_norm_const - 1)
+            * (numpy.linalg.norm(self.paths_sigma) / self.chi_norm_const - 1),
         )
 
     def _cov_matrix_diagonalization(self):
@@ -258,7 +262,7 @@ class CMAES(NormalContinuous):
         model_states: StatesModel = None,
         env_states: StatesEnv = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> StatesModel:
         """
         Return a new blank State for a `DiscreteUniform` instance, and a valid \
@@ -295,7 +299,8 @@ class CMAES(NormalContinuous):
         for i in range(self.pop_size):
             normal_noise = self.random_state.randn(self.n_dims).reshape(-1, 1)
             action = self.x_mean + self.sigma * numpy.matmul(
-                self.coords_matrix, self.scaling_diag * normal_noise
+                self.coords_matrix,
+                self.scaling_diag * normal_noise,
             )
             actions[i, :] = action.flatten()
             self._count_eval += 1
@@ -304,9 +309,12 @@ class CMAES(NormalContinuous):
     def _init_algorithm_params(self, batch_size):
         self.pop_size = batch_size
         self.mu_const = self.pop_size / 2  # Number of parents/points for recombination
-        self.weights_const = numpy.log(self.mu_const + 0.5) - numpy.log(
-            numpy.arange(1, self.mu_const + 1)
-        ).reshape((-1, 1))
+        self.weights_const = (
+            numpy.log(self.mu_const + 0.5)
+            - numpy.log(
+                numpy.arange(1, self.mu_const + 1),
+            ).reshape((-1, 1))
+        )
         self.mu_const = int(numpy.floor(self.mu_const))
         self.weights_const = self.weights_const / numpy.sum(self.weights_const)
         self.mu_eff_const = numpy.sum(self.weights_const) ** 2 / numpy.sum(self.weights_const ** 2)
@@ -332,7 +340,7 @@ class CMAES(NormalContinuous):
         self.paths_sigma = numpy.zeros((self.n_dims, 1))
         self.coords_matrix = numpy.eye(self.n_dims)  # Defines the coordinate system
         self.scaling_diag = numpy.ones(
-            (self.n_dims, 1)
+            (self.n_dims, 1),
         )  # Diagonal matrix that defines the scaling
         self.cov_matrix = (
             self.coords_matrix * numpy.diag(self.scaling_diag ** 2) * self.coords_matrix.T

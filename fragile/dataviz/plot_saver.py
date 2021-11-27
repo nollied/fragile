@@ -68,7 +68,7 @@ class PlotSaver(SwarmWrapper):
             filename=filepath,
             fmt=self._fmt,
             **self._save_kwargs,
-            backend=holoviews.Store.current_backend
+            backend=holoviews.Store.current_backend,
         )
 
     def run(

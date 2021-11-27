@@ -8,6 +8,7 @@ from fragile.core.states import StatesEnv, StatesModel
 from fragile.core.typing import StateDict, Tensor
 from fragile.distributed.ray import MAX_CALLS_ACTOR, N_GPUS_ACTOR, ray
 
+
 # The type hints of the base class are not supported by cloudpickle
 # and will raise errors in Python3.6
 

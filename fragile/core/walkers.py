@@ -31,7 +31,7 @@ class SimpleWalkers(BaseWalkers):
         max_epochs: int = None,
         distance_function: Optional[Callable[[Tensor, Tensor], Tensor]] = None,
         ignore_clone: Optional[Dict[str, Set[str]]] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a new `Walkers` instance.
@@ -290,10 +290,14 @@ class SimpleWalkers(BaseWalkers):
         self.update_states(will_clone=will_clone)
         clone, compas = self.states.clone()
         self._env_states.clone(
-            will_clone=clone, compas_ix=compas, ignore=self.ignore_clone.get("env")
+            will_clone=clone,
+            compas_ix=compas,
+            ignore=self.ignore_clone.get("env"),
         )
         self._model_states.clone(
-            will_clone=clone, compas_ix=compas, ignore=self.ignore_clone.get("model")
+            will_clone=clone,
+            compas_ix=compas,
+            ignore=self.ignore_clone.get("model"),
         )
 
     def reset(
@@ -319,7 +323,10 @@ class SimpleWalkers(BaseWalkers):
         self._epoch = 0
 
     def update_states(
-        self, env_states: StatesEnv = None, model_states: StatesModel = None, **kwargs
+        self,
+        env_states: StatesEnv = None,
+        model_states: StatesModel = None,
+        **kwargs,
     ):
         """
         Update the States variables that do not contain internal data and \
@@ -378,7 +385,9 @@ class SimpleWalkers(BaseWalkers):
             shape = v.shape if hasattr(v, "shape") else None
             new_str = (
                 "{}: shape {} Mean: {:.3f}, Std: {:.3f}, Max: {:.3f} Min: {:.3f}\n".format(
-                    k, shape, *statistics_from_array(v)
+                    k,
+                    shape,
+                    *statistics_from_array(v),
                 )
                 if dtype.is_tensor(v) and "best" not in k
                 else ("%s %s\n" % (k, v if not dtype.is_tensor(v) else v.flatten()))
@@ -413,7 +422,7 @@ class Walkers(SimpleWalkers):
         minimize: bool = False,
         reward_limit: float = None,
         fix_best: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`Walkers`.
@@ -474,7 +483,7 @@ class Walkers(SimpleWalkers):
             best_obs=best_obs,
             best_state=best_state,
             best_id=best_id,
-            **kwargs
+            **kwargs,
         )
         self.critic = critic
         self.minimize = minimize
@@ -487,7 +496,9 @@ class Walkers(SimpleWalkers):
 
     def __repr__(self):
         text = "\nBest reward found: {:.4f} , efficiency {:.3f}, Critic: {}\n".format(
-            float(self.states.best_reward), self.efficiency, self.critic
+            float(self.states.best_reward),
+            self.efficiency,
+            self.critic,
         )
         return text + super(Walkers, self).__repr__()
 
@@ -611,7 +622,9 @@ class Walkers(SimpleWalkers):
 
         """
         super(Walkers, self).reset(
-            env_states=env_states, model_states=model_states, walkers_states=walkers_states
+            env_states=env_states,
+            model_states=model_states,
+            walkers_states=walkers_states,
         )
         best_ix = (
             self.env_states.rewards.argmin() if self.minimize else self.env_states.rewards.argmax()
@@ -625,6 +638,8 @@ class Walkers(SimpleWalkers):
         )
         if self.critic is not None:
             critic_score = self.critic.reset(
-                env_states=self.env_states, model_states=model_states, walker_states=walkers_states
+                env_states=self.env_states,
+                model_states=model_states,
+                walker_states=walkers_states,
             )
             self.states.update(critic_score=critic_score)

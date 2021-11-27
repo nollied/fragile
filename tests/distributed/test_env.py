@@ -9,9 +9,10 @@ from fragile.core.env import Environment as CoreEnv
 from fragile.core.states import StatesModel
 from fragile.distributed.env import ParallelEnv, RayEnv
 from fragile.optimize.benchmarks import Rastrigin
-from tests.core.test_env import discrete_atari_env, classic_control_env, TestEnvironment
+from tests.core.test_env import classic_control_env, discrete_atari_env, TestEnvironment
 from tests.distributed.ray import init_ray, ray
 from tests.optimize.test_env import local_minimizer  # TestFunction, local_minimizer
+
 
 N_WALKERS = 10
 

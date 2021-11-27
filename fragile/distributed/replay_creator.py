@@ -1,3 +1,4 @@
+"""Code for generating game replays in an distributed Swarm."""
 from typing import Callable, Iterable, List, Tuple
 
 from judo import typing
@@ -51,7 +52,7 @@ class ReplayCreator:
         edge_names: NamesData = NetworkxTree.DEFAULT_EDGE_DATA,
         next_prefix: str = NetworkxTree.DEFAULT_NEXT_PREFIX,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`Swarm`.
@@ -124,13 +125,16 @@ class ReplayCreator:
                 force_logging=True,
                 n_workers=n_workers_per_swarm,
                 *args,
-                **kwargs
+                **kwargs,
             )
             for _ in range(n_swarms)
         ]
         max_size = max_examples if max_examples is not None else num_examples
         self.memory = ReplayMemory.remote(
-            max_size=max_size, names=names, mode=mode, min_size=num_examples
+            max_size=max_size,
+            names=names,
+            mode=mode,
+            min_size=num_examples,
         )
         self._names = names
         self.memory_length = 0
@@ -146,6 +150,7 @@ class ReplayCreator:
         return self._names
 
     def __getattr__(self, item):
+        """Get data from remote if needed."""
         if item in self.names:
             return ray.get(self.memory.get.remote(item))
         return self.__getattribute__(item)
@@ -167,10 +172,7 @@ class ReplayCreator:
         return ray.get(self.memory.get_values.remote())
 
     def iterate_values(self) -> Iterable[Tuple[typing.Tensor]]:
-        """
-        Return a generator that yields a tuple containing the data of each state \
-        stored in the memory.
-        """
+        """Return a generator that yields a tuple with the data of each state in the memory."""
         return ray.get(self.memory.iterate_values.remote())
 
     def run(self, root_walker: OneWalker = None, report_interval=None):
@@ -191,7 +193,9 @@ class ReplayCreator:
 
         memorize_id = None
         with tqdm(
-            total=self.target_memory_size, disable=not self.show_pbar, desc="Generated examples"
+            total=self.target_memory_size,
+            disable=not self.show_pbar,
+            desc="Generated examples",
         ) as pbar:
             while self.memory_length < self.target_memory_size:
                 try:
@@ -213,6 +217,6 @@ class ReplayCreator:
                     if not isinstance(e, KeyboardInterrupt):
                         self._log.warning(
                             "Stopped due to unhandled exception: %s\n %s"
-                            % (e.__class__.__name__, e)
+                            % (e.__class__.__name__, e),
                         )
                     break

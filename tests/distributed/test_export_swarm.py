@@ -3,8 +3,7 @@ from judo import dtype, tensor
 import numpy
 import pytest
 
-from fragile.distributed.export_swarm import ExportSwarm, ExportedWalkers, ParamServer
-
+from fragile.distributed.export_swarm import ExportedWalkers, ExportSwarm, ParamServer
 from tests.core.test_swarm import create_cartpole_swarm, TestSwarm
 
 

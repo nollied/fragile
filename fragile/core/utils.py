@@ -12,10 +12,8 @@ NUMPY_IGNORE_WARNINGS_PARAMS = {
 
 def get_plangym_env(swarm: "Swarm") -> "plangym.BaseEnvironment":  # noqa: F821
     """Return the :class:`plangym.Environment` of the target Swarm."""
-    from plangym import (
-        BaseEnvironment as PlangymEnv,
-        ParallelEnvironment as PlangymParallelEnv,
-    )
+    from plangym import BaseEnvironment as PlangymEnv, ParallelEnvironment as PlangymParallelEnv
+
     from fragile import core
     from fragile.distributed import ParallelEnv as FragileParallelEnv, RayEnv
 

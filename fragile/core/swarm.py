@@ -5,12 +5,7 @@ from typing import Any, Callable, Iterable, List
 import judo
 import numpy
 
-from fragile.core.base_classes import (
-    BaseCritic,
-    BaseEnvironment,
-    BaseModel,
-    BaseSwarm,
-)
+from fragile.core.base_classes import BaseCritic, BaseEnvironment, BaseModel, BaseSwarm
 from fragile.core.states import OneWalker, StatesEnv, StatesModel, StatesWalkers
 from fragile.core.tree import HistoryTree
 from fragile.core.typing import Scalar, Tensor
@@ -41,7 +36,7 @@ class Swarm(BaseSwarm):
         use_notebook_widget: bool = True,
         force_logging: bool = False,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`Swarm`.
@@ -78,7 +73,7 @@ class Swarm(BaseSwarm):
             distance_scale=distance_scale,
             tree=tree,
             *args,
-            **kwargs
+            **kwargs,
         )
         self._notebook_container = None
         self._use_notebook_widget = use_notebook_widget
@@ -175,7 +170,7 @@ class Swarm(BaseSwarm):
         tree: Callable[[], HistoryTree] = None,
         prune_tree: bool = True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize and set up all the necessary internal variables to run the swarm.
@@ -217,7 +212,7 @@ class Swarm(BaseSwarm):
             reward_scale=reward_scale,
             distance_scale=distance_scale,
             *args,
-            **kwargs
+            **kwargs,
         )
         self.tree: HistoryTree = tree() if tree is not None else None
         self._prune_tree = prune_tree
@@ -255,7 +250,7 @@ class Swarm(BaseSwarm):
             if not isinstance(root_walker, OneWalker):
                 raise ValueError(
                     "Root walker needs to be an "
-                    "instance of OneWalker, got %s instead." % type(root_walker)
+                    "instance of OneWalker, got %s instead." % type(root_walker),
                 )
             env_states = self._update_env_with_root(root_walker=root_walker, env_states=env_states)
 
@@ -332,7 +327,7 @@ class Swarm(BaseSwarm):
                     tb = traceback.format_exc()
                     name = e.__class__.__name__
                     self._log.warning(
-                        "Stopped due to unhandled exception: %s\n %s\n %s" % (name, e, tb)
+                        "Stopped due to unhandled exception: %s\n %s\n %s" % (name, e, tb),
                     )
                 break
 
@@ -363,7 +358,9 @@ class Swarm(BaseSwarm):
             from tqdm import trange
 
         loop_iterable = trange(
-            self.max_epochs, desc="%s" % self.__class__.__name__, disable=no_tqdm
+            self.max_epochs,
+            desc="%s" % self.__class__.__name__,
+            disable=no_tqdm,
         )
 
         if self._ipython_mode and self._use_notebook_widget:
@@ -375,8 +372,8 @@ class Swarm(BaseSwarm):
     def setup_notebook_container(self):
         """Display the display widgets if the Swarm is running in an IPython kernel."""
         if self._ipython_mode and self._use_notebook_widget:
-            from ipywidgets import HTML
             from IPython.core.display import display, HTML as cell_html
+            from ipywidgets import HTML
 
             # Set font weight of tqdm progressbar
             display(cell_html("<style> .widget-label {font-weight: bold !important;} </style>"))
@@ -442,7 +439,9 @@ class Swarm(BaseSwarm):
 
         parent_ids = judo.copy(self.walkers.states.id_walkers) if self.tree is not None else None
         model_states = self.model.predict(
-            env_states=env_states, model_states=model_states, walkers_states=self.walkers.states
+            env_states=env_states,
+            model_states=model_states,
+            walkers_states=self.walkers.states,
         )
         env_states = self.env.step(model_states=model_states, env_states=env_states)
         self.walkers.update_states(

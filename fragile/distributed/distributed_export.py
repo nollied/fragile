@@ -74,7 +74,9 @@ class DistributedExport:
         self.max_epochs = ray.get(self.swarms[0].get.remote("max_epochs"))
         self.reward_limit = ray.get(self.swarms[0].get.remote("reward_limit"))
         self.param_server = RemoteParamServer.remote(
-            max_len=max_len, minimize=self.minimize, add_global_best=add_global_best
+            max_len=max_len,
+            minimize=self.minimize,
+            add_global_best=add_global_best,
         )
         self._epoch = 0
 
@@ -124,7 +126,7 @@ class DistributedExport:
 
             # Compute and apply gradients.
             current_import_walkers = self.param_server.exchange_walkers.remote(
-                ready_export_walker_id
+                ready_export_walker_id,
             )
             steps[swarm.run_exchange_step.remote(current_import_walkers)] = swarm
 

@@ -22,6 +22,7 @@ from fragile.dataviz.swarm_stats import (
     WalkersDensity,
 )
 
+
 ALL_SWARM_TYPES = (
     GridLandscape,
     DistanceLandscape,

@@ -9,6 +9,7 @@ import pytest
 from fragile.core.env import DiscreteEnv, Environment
 from fragile.core.states import StatesEnv, StatesModel
 
+
 N_WALKERS = 10
 
 

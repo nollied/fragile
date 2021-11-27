@@ -13,6 +13,7 @@ from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 from fragile.core.utils import NUMPY_IGNORE_WARNINGS_PARAMS
 from fragile.core.walkers import Walkers
 
+
 warnings.filterwarnings("ignore", category=HypothesisDeprecationWarning)
 
 

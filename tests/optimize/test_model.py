@@ -4,8 +4,8 @@ import pytest
 
 from fragile.core.states import StatesEnv, StatesModel
 from fragile.optimize.models import CMAES, ESModel
-
 from tests.core.test_model import TestModel
+
 
 BATCH_SIZE = 10
 

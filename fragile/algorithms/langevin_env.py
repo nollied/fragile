@@ -45,7 +45,9 @@ class Langevin(Function):
 
         """
         super(Langevin, self).__init__(
-            function=function, bounds=bounds, custom_domain_check=custom_domain_check
+            function=function,
+            bounds=bounds,
+            custom_domain_check=custom_domain_check,
         )
         self.brownian = brownian
         self.derivative = derivative
@@ -53,7 +55,9 @@ class Langevin(Function):
         self.temperature = temperature
 
     def make_transitions(
-        self, observs: numpy.ndarray, actions: numpy.ndarray
+        self,
+        observs: numpy.ndarray,
+        actions: numpy.ndarray,
     ) -> Dict[str, numpy.ndarray]:
         """
 
@@ -148,6 +152,8 @@ class Langevin(Function):
         new_points = numpy.zeros(tuple([batch_size]) + tuple([size]), dtype=numpy.float32)
         for i in range(batch_size):
             new_points[i, :] = self.random_state.uniform(
-                low=self.bounds.low, high=self.bounds.high, size=size
+                low=self.bounds.low,
+                high=self.bounds.high,
+                size=size,
             )
         return new_points

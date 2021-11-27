@@ -9,6 +9,7 @@ from fragile.optimize.benchmarks import sphere
 from fragile.optimize.env import Function, MinimizerWrapper
 from tests.core.test_env import TestEnvironment
 
+
 N_WALKERS = 50
 
 # Backend.set_backend("numpy")

@@ -1,5 +1,6 @@
 from tests import IN_CI
 
+
 try:
     import ray
 

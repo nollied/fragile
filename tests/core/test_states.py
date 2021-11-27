@@ -4,8 +4,8 @@ from judo.tests.test_states import TestStates
 import pytest
 
 from fragile.core.states import States, StatesEnv, StatesModel, StatesWalkers
-
 from tests.core.test_swarm import create_atari_swarm
+
 
 state_classes = [States, StatesEnv, StatesModel, StatesWalkers]
 

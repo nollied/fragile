@@ -1,6 +1,7 @@
 """Module that includes scalable search algorithms."""
 import sys
 
+
 try:
     from fragile.distributed.distributed_export import DistributedExport
     from fragile.distributed.env import ParallelEnv, RayEnv

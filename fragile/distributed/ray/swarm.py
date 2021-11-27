@@ -38,7 +38,7 @@ class RemoteSwarm(CoreSwarm):
         prune_tree: bool = True,
         n_workers: int = 8,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize and set up all the necessary internal variables to run the swarm.
@@ -84,7 +84,7 @@ class RemoteSwarm(CoreSwarm):
             reward_scale=reward_scale,
             distance_scale=distance_scale,
             *args,
-            **kwargs
+            **kwargs,
         )
         self.tree = tree() if tree is not None else None
         self._prune_tree = prune_tree
@@ -124,7 +124,7 @@ class RemoteSwarm(CoreSwarm):
             if not isinstance(root_walker, OneWalker):
                 raise ValueError(
                     "Root walker needs to be an "
-                    "instance of OneWalker, got %s instead." % type(root_walker)
+                    "instance of OneWalker, got %s instead." % type(root_walker),
                 )
             env_states = self._update_env_with_root(root_walker=root_walker, env_states=env_states)
 
@@ -193,7 +193,9 @@ class RemoteSwarm(CoreSwarm):
         parent_ids = judo.copy(self.walkers.get("id_walkers")) if self.tree is not None else None
 
         model_states = self.model.predict(
-            env_states=env_states, model_states=model_states, walkers_states=walkers_states
+            env_states=env_states,
+            model_states=model_states,
+            walkers_states=walkers_states,
         )
         env_states = await self.env.step.remote(model_states=model_states, env_states=env_states)
         # env_states = ray.get(step_id)
@@ -257,7 +259,7 @@ class RemoteSwarm(CoreSwarm):
                     tb = traceback.format_exc()
                     name = e.__class__.__name__
                     self._log.warning(
-                        "Stopped due to unhandled exception: %s\n %s\n %s" % (name, e, tb)
+                        "Stopped due to unhandled exception: %s\n %s\n %s" % (name, e, tb),
                     )
                 break
         return self

@@ -124,7 +124,7 @@ class BaseCritic(StatesOwner):
         env_states: StatesEnv = None,
         walkers_states: StatesWalkers = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Union[States, None]:
         """
         Restart the `Critic` and reset its internal state.
@@ -153,7 +153,7 @@ class BaseCritic(StatesOwner):
         env_states: StatesEnv = None,
         walkers_states: StatesWalkers = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Union[States, None]:
         """
         Update the :class:`BaseCritic` internal state.
@@ -220,7 +220,7 @@ class BaseEnvironment(StatesOwner):
             raise ValueError(
                 "The returned values from states_to_data need to "
                 "be an instance of dict or tuple. "
-                "Got %s instead" % type(transition_data)
+                "Got %s instead" % type(transition_data),
             )
 
         new_data = (
@@ -248,7 +248,9 @@ class BaseEnvironment(StatesOwner):
         return super(BaseEnvironment, self).states_from_data(batch_size=batch_size, **kwargs)
 
     def states_to_data(
-        self, model_states: StatesModel, env_states: StatesEnv
+        self,
+        model_states: StatesModel,
+        env_states: StatesEnv,
     ) -> Union[Dict[str, Tensor], Tuple[Tensor, ...]]:
         """
         Extract the data from the :class:`StatesEnv` and the :class:`StatesModel` \
@@ -376,7 +378,11 @@ class BaseModel(StatesOwner):
         raise NotImplementedError
 
     def reset(
-        self, batch_size: int = 1, model_states: StatesModel = None, *args, **kwargs
+        self,
+        batch_size: int = 1,
+        model_states: StatesModel = None,
+        *args,
+        **kwargs,
     ) -> StatesModel:
         """
         Restart the model and reset its internal state.
@@ -516,7 +522,10 @@ class BaseWalkers(StatesOwner):
         return state_dict
 
     def update_states(
-        self, env_states: StatesEnv = None, model_states: StatesModel = None, **kwargs
+        self,
+        env_states: StatesEnv = None,
+        model_states: StatesModel = None,
+        **kwargs,
     ) -> None:
         """
         Update the States variables that do not contain internal data and \
@@ -596,7 +605,7 @@ class BaseSwarm:
         reward_scale: float = 1.0,
         distance_scale: float = 1.0,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`BaseSwarm`.
@@ -626,7 +635,7 @@ class BaseSwarm:
             reward_scale=reward_scale,
             distance_scale=distance_scale,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     @property
@@ -729,7 +738,7 @@ class BaseSwarm:
         reward_scale: float = 1.0,
         distance_scale: float = 1.0,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize and set up all the necessary internal variables to run the swarm.

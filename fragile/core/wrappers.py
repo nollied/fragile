@@ -42,7 +42,7 @@ class CriticWrapper(BaseWrapper, BaseCritic):
             env_states=env_states,
             walkers_states=walkers_states,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def reset(
@@ -52,7 +52,7 @@ class CriticWrapper(BaseWrapper, BaseCritic):
         env_states: StatesEnv = None,
         walkers_states: StatesWalkers = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Union[States, None]:
         return self.unwrapped.__class__.reset(
             self.unwrapped,
@@ -61,7 +61,7 @@ class CriticWrapper(BaseWrapper, BaseCritic):
             env_states=env_states,
             walkers_states=walkers_states,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def update(
@@ -71,7 +71,7 @@ class CriticWrapper(BaseWrapper, BaseCritic):
         env_states: StatesEnv = None,
         walkers_states: StatesWalkers = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Union[States, None]:
         return self.unwrapped.__class__.update(
             self.unwrapped,
@@ -80,7 +80,7 @@ class CriticWrapper(BaseWrapper, BaseCritic):
             env_states=env_states,
             walkers_states=walkers_states,
             *args,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -98,7 +98,7 @@ class ModelWrapper(BaseWrapper, Model):
         env_states: StatesEnv = None,
         walkers_states: StatesWalkers = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> StatesModel:
         return self.unwrapped.__class__.sample(
             self.unwrapped,
@@ -107,7 +107,7 @@ class ModelWrapper(BaseWrapper, Model):
             env_states=env_states,
             walkers_states=walkers_states,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def predict(
@@ -126,32 +126,52 @@ class ModelWrapper(BaseWrapper, Model):
             env_states=env_states,
             walkers_states=walkers_states,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def reset(
-        self, batch_size: int = 1, model_states: StatesModel = None, *args, **kwargs
+        self,
+        batch_size: int = 1,
+        model_states: StatesModel = None,
+        *args,
+        **kwargs,
     ) -> StatesModel:
         return self.unwrapped.__class_.reset(
-            self.unwrapped, batch_size=batch_size, model_states=model_states, *args, **kwargs
+            self.unwrapped,
+            batch_size=batch_size,
+            model_states=model_states,
+            *args,
+            **kwargs,
         )
 
     def add_critic_params(
-        self, params: dict, override_params: bool = True, *args, **kwargs
+        self,
+        params: dict,
+        override_params: bool = True,
+        *args,
+        **kwargs,
     ) -> StateDict:
         return self.unwrapped.__class__.add_critic_params(
-            self.unwrapped, params=params, override_params=override_params, *args, **kwargs
+            self.unwrapped,
+            params=params,
+            override_params=override_params,
+            *args,
+            **kwargs,
         )
 
     def update_states_with_critic(
-        self, actions: judo.typing.Tensor, batch_size: int, model_states: StatesModel, **kwargs
+        self,
+        actions: judo.typing.Tensor,
+        batch_size: int,
+        model_states: StatesModel,
+        **kwargs,
     ) -> StatesModel:
         return self.unwrapped.__class__.update_states_with_critic(
             self.unwrapped,
             actions=actions,
             batch_size=batch_size,
             model_states=model_states,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -163,7 +183,14 @@ class EnvWrapper(BaseWrapper, Environment):
         return self.unwrapped.__class__.get_params_dict(self.unwrapped)
 
     def states_from_data(
-        self, batch_size, states, observs, rewards, oobs, terminals=None, **kwargs
+        self,
+        batch_size,
+        states,
+        observs,
+        rewards,
+        oobs,
+        terminals=None,
+        **kwargs,
     ) -> StatesEnv:
         return self.unwrapped.__class__.states_from_data(
             self.unwrapped,
@@ -173,27 +200,34 @@ class EnvWrapper(BaseWrapper, Environment):
             rewards=rewards,
             oobs=oobs,
             terminals=terminals,
-            **kwargs
+            **kwargs,
         )
 
     def reset(self, batch_size: int = 1, env_states: StatesEnv = None, **kwargs) -> StatesEnv:
         return self.unwrapped.__class__.reset(
-            self.unwrapped, batch_size=batch_size, env_states=env_states, **kwargs
+            self.unwrapped,
+            batch_size=batch_size,
+            env_states=env_states,
+            **kwargs,
         )
 
     def step(self, model_states: StatesModel, env_states: StatesEnv) -> StatesEnv:
         return self.unwrapped.__class__.step(
-            self.unwrapped, model_states=model_states, env_states=env_states
+            self.unwrapped, model_states=model_states, env_states=env_states,
         )
 
     def make_transitions(self, *args, **kwargs) -> Dict[str, judo.typing.Tensor]:
         return self.unwrapped.__class__.make_transitions(self.unwrapped, *args, **kwargs)
 
     def states_to_data(
-        self, model_states: StatesModel, env_states: StatesEnv
+        self,
+        model_states: StatesModel,
+        env_states: StatesEnv,
     ) -> Union[Dict[str, judo.typing.Tensor], Tuple[judo.typing.Tensor, ...]]:
         return self.unwrapped.__class__.states_to_data(
-            self.unwrapped, model_states=model_states, env_states=env_states
+            self.unwrapped,
+            model_states=model_states,
+            env_states=env_states,
         )
 
 
@@ -248,19 +282,26 @@ class WalkersWrapper(BaseWrapper, Walkers):
             model_states=model_states,
             walkers_states=walkers_states,
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def update_states(
-        self, env_states: StatesEnv = None, model_states: StatesModel = None, **kwargs
+        self,
+        env_states: StatesEnv = None,
+        model_states: StatesModel = None,
+        **kwargs,
     ):
         return self.unwrapped.__class__.update_states(
-            self.unwrapped, env_states=env_states, model_states=model_states, **kwargs
+            self.unwrapped,
+            env_states=env_states,
+            model_states=model_states,
+            **kwargs,
         )
 
     def _accumulate_and_update_rewards(self, rewards: judo.typing.Tensor):
         return self.unwrapped.__class__._accumulate_and_update_rewards(
-            self.unwrapped, rewards=rewards
+            self.unwrapped,
+            rewards=rewards,
         )
 
     def fix_best(self):
@@ -303,7 +344,7 @@ class SwarmWrapper(BaseWrapper, Swarm):
             walkers_states=walkers_states,
             model_states=model_states,
             env_states=env_states,
-            **kwargs
+            **kwargs,
         )
 
     def run(
@@ -339,7 +380,7 @@ class SwarmWrapper(BaseWrapper, Swarm):
         tree: Callable[[], HistoryTree] = None,
         prune_tree: bool = True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         return self.unwrapped.__class__.init_swarm(
             self.unwrapped,
@@ -384,7 +425,9 @@ class SwarmWrapper(BaseWrapper, Swarm):
 
     def _update_env_with_root(self, root_walker, env_states) -> StatesEnv:
         return self.unwrapped.__class__._update_env_with_root(
-            self.unwrapped, root_walker=root_walker, env_states=env_states
+            self.unwrapped,
+            root_walker=root_walker,
+            env_states=env_states,
         )
 
 
@@ -428,5 +471,7 @@ class TreeWrapper(BaseWrapper, HistoryTree):
 
     def prune_tree(self, alive_leafs: set, from_hash: bool = False) -> None:
         return self.unwrapped.__class__.prune_tree(
-            self.unwrapped, alive_leafs=alive_leafs, from_hash=from_hash
+            self.unwrapped,
+            alive_leafs=alive_leafs,
+            from_hash=from_hash,
         )

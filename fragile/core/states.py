@@ -224,7 +224,9 @@ class StatesWalkers(States):
         if state_dict is not None:
             updated_dict.update(state_dict)
         super(StatesWalkers, self).__init__(
-            state_dict=updated_dict, batch_size=batch_size, **kwargs
+            state_dict=updated_dict,
+            batch_size=batch_size,
+            **kwargs,
         )
 
     def get_params_dict(self) -> StateDict:
@@ -299,7 +301,7 @@ class OneWalker(States):
         id_walker=None,
         time=0.0,
         state_dict: StateDict = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`OneWalker`.
@@ -343,7 +345,7 @@ class OneWalker(States):
                 if k not in state_dict:
                     raise ValueError(
                         "The provided attributes must be defined in state_dict."
-                        "param_dict: %s\n kwargs: %s" % (state_dict, kwargs)
+                        "param_dict: %s\n kwargs: %s" % (state_dict, kwargs),
                     )
         self.observs[:] = judo.copy(observ)
         self.states[:] = judo.copy(state)

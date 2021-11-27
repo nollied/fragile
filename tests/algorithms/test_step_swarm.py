@@ -2,11 +2,11 @@ import judo
 from plangym import ClassicControl
 import pytest
 
+from fragile.algorithms import FollowBestModel, StepSwarm, StepToBest
 from fragile.core import DiscreteEnv, DiscreteUniform
-from fragile.algorithms import FollowBestModel, StepToBest, StepSwarm
 from fragile.distributed.env import ParallelEnv, RayEnv
 from tests.core.test_swarm import TestSwarm
-from tests.distributed.ray.test_export_swarm import kill_swarm, init_ray
+from tests.distributed.ray.test_export_swarm import init_ray, kill_swarm
 
 
 def cartpole_env():
@@ -69,6 +69,7 @@ def create_step_to_best():
 
 def create_step_to_best_after_impr():
     from plangym import AtariEnvironment
+
     from fragile.core import GaussianDt
 
     env = AtariEnvironment(name="MsPacman-ram-v0", clone_seeds=True, autoreset=True)

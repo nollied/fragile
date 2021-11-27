@@ -1,9 +1,12 @@
+"""Classes to run Environments in a distributed fashion."""
 import atexit  # noqa: I202
+
 
 try:
     from torch import multiprocessing
 except ImportError:
     import multiprocessing
+
 import sys  # noqa: I202
 import traceback
 from typing import Callable, Dict, List, Tuple, Union
@@ -331,6 +334,7 @@ class _ParallelEnvironment:
         self._batch_env = _BatchEnv(envs, blocking)
 
     def __getattr__(self, item):
+        """Forward to _env."""
         return getattr(self._env, item)
 
     def close(self):
@@ -392,11 +396,14 @@ class ParallelEnv(EnvWrapper):
         self.blocking = blocking
         self._distribute_names = distribute if distribute is not None else []
         self.parallel_env = _ParallelEnvironment(
-            env_callable=env_callable, n_workers=n_workers, blocking=blocking
+            env_callable=env_callable,
+            n_workers=n_workers,
+            blocking=blocking,
         )
         super(ParallelEnv, self).__init__(env_callable(), name="_local_env")
 
     def __getattr__(self, item):
+        """Forward to the distributed workers."""
         if item in self._distribute_names:
             return lambda **kwargs: self.distribute(item, **kwargs)
         elif isinstance(self._local_env, BaseWrapper):
@@ -436,7 +443,7 @@ class ParallelEnv(EnvWrapper):
             raise ValueError(
                 "The returned values from states_to_data need to "
                 "be an instance of dict or tuple. "
-                "Got %s instead" % type(transition_data)
+                "Got %s instead" % type(transition_data),
             )
 
         new_data = (
@@ -452,7 +459,9 @@ class ParallelEnv(EnvWrapper):
         return self.parallel_env.distribute(name, **kwargs)
 
     def states_to_data(
-        self, model_states: StatesModel, env_states: StatesEnv
+        self,
+        model_states: StatesModel,
+        env_states: StatesEnv,
     ) -> Union[Dict[str, Tensor], Tuple[Tensor, ...]]:
         """Use the wrapped environment to get the data with no parallelization."""
         return self._local_env.states_to_data(model_states=model_states, env_states=env_states)
@@ -512,7 +521,7 @@ class RayEnv(EnvWrapper):
         self._distribute_name = distribute if distribute is not None else {}
         self.envs: List[RemoteEnvironment] = [
             RemoteEnvironment.options(**options).remote(
-                env_callable=env_callable, env_kwargs=env_kwargs
+                env_callable=env_callable, env_kwargs=env_kwargs,
             )
             for _ in range(n_workers)
         ]
@@ -531,6 +540,7 @@ class RayEnv(EnvWrapper):
         return self
 
     def __getattr__(self, item):
+        """Forward to the distributed workers."""
         if item in self._distribute_name:
             return lambda **kwargs: self.distribute(name=item, **kwargs)
         if isinstance(self._local_env, BaseWrapper):
@@ -556,13 +566,14 @@ class RayEnv(EnvWrapper):
 
         """
         transition_data = self._local_env.states_to_data(
-            model_states=model_states, env_states=env_states
+            model_states=model_states,
+            env_states=env_states,
         )
         if not isinstance(transition_data, (dict, tuple)):
             raise ValueError(
                 "The returned values from states_to_data need to "
                 "be an instance of dict or tuple. "
-                "Got %s instead" % type(transition_data)
+                "Got %s instead" % type(transition_data),
             )
         new_data = (
             self.make_transitions(*transition_data)
@@ -627,7 +638,11 @@ class RayEnv(EnvWrapper):
         return merged
 
     def reset(
-        self, batch_size: int = 1, env_states: StatesEnv = None, *args, **kwargs
+        self,
+        batch_size: int = 1,
+        env_states: StatesEnv = None,
+        *args,
+        **kwargs,
     ) -> StatesEnv:
         """
         Reset the environment to the start of a new episode and returns a new \

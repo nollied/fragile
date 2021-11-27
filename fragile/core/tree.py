@@ -37,7 +37,7 @@ class HistoryTree(JudoTree):
     """
 
     def get_states_ids(
-        self, walkers_states: StatesWalkers, **kwargs
+        self, walkers_states: StatesWalkers, **kwargs,
     ) -> Tuple[Tensor, StatesWalkers]:
         leaf_ids = judo.to_numpy(walkers_states.get("id_walkers"))
         return leaf_ids, walkers_states

@@ -34,13 +34,21 @@ class FunctionMapper(Swarm):
             **kwargs: Passed :class:`Swarm` __init__.
         """
         super(FunctionMapper, self).__init__(
-            model=model, accumulate_rewards=accumulate_rewards, minimize=minimize, *args, **kwargs
+            model=model,
+            accumulate_rewards=accumulate_rewards,
+            minimize=minimize,
+            *args,
+            **kwargs,
         )
         self.start_same_pos = start_same_pos
 
     @classmethod
     def from_function(
-        cls, function: Callable, bounds: Bounds, *args, **kwargs
+        cls,
+        function: Callable,
+        bounds: Bounds,
+        *args,
+        **kwargs,
     ) -> "FunctionMapper":
         """
         Initialize a :class:`FunctionMapper` using a python callable and a \

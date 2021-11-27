@@ -9,6 +9,7 @@ import numpy as np
 from fragile.core.states import StatesEnv
 from fragile.optimize.env import Bounds, Function
 
+
 """
 This file includes several test functions for optimization described here:
 https://en.wikipedia.org/wiki/Test_functions_for_optimization
@@ -40,7 +41,8 @@ def styblinski_tang(x) -> np.ndarray:
 
 def rosenbrock(x) -> np.ndarray:
     return 100 * judo.sum((x[:, :-2] ** 2 - x[:, 1:-1]) ** 2, 1) + judo.sum(
-        (x[:, :-2] - 1) ** 2, 1
+        (x[:, :-2] - 1) ** 2,
+        1,
     )
 
 

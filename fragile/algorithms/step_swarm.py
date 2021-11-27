@@ -338,7 +338,7 @@ class StepSwarm(Swarm):
         internal_notebook_widget: bool = False,
         internal_show_pbar: bool = False,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`StepSwarm`.
@@ -415,10 +415,11 @@ class StepSwarm(Swarm):
             internal_show_pbar,
             internal_tree,
             *args,
-            **kwargs
+            **kwargs,
         )
         self.root_model: RootModel = root_model(
-            env=self.internal_swarm.env, model=self.internal_swarm.model
+            env=self.internal_swarm.env,
+            model=self.internal_swarm.model,
         )
 
         if reward_limit is None:
@@ -481,8 +482,8 @@ class StepSwarm(Swarm):
                 env=env,
                 actions_shape=actions_shape,
                 *args,
-                **kwargs
-            )
+                **kwargs,
+            ),
         )
         self.internal_swarm.reset()
 
@@ -642,11 +643,13 @@ class StepSwarm(Swarm):
         best_ix = self.walkers.get_best_index()  # if self.step_after_improvement else None
         if self._should_step_root_state(best_ix):
             model_states = self.root_model.predict(
-                root_env_states=self.root_env_states, walkers=self.walkers
+                root_env_states=self.root_env_states,
+                walkers=self.walkers,
             )
             parent_id = copy.copy(self.best_id)
             new_env_states = self.env.step(
-                model_states=model_states, env_states=self.root_env_states
+                model_states=model_states,
+                env_states=self.root_env_states,
             )
             self.update_states(new_env_states, model_states, best_ix)
             self.update_tree(states_ids=[parent_id])

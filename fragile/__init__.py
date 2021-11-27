@@ -4,6 +4,7 @@ import warnings
 
 from judo import slogging  # noqa: E402
 
+
 warnings.filterwarnings(
     "ignore",
     message=(

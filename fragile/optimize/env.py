@@ -3,8 +3,7 @@ from typing import Callable, Dict, Tuple, Union
 import judo
 from judo import Backend, Bounds, tensor, typing
 import numpy
-from scipy.optimize import Bounds as ScipyBounds
-from scipy.optimize import minimize
+from scipy.optimize import Bounds as ScipyBounds, minimize
 
 from fragile.core.env import Environment
 from fragile.core.states import StatesEnv, StatesModel
@@ -115,7 +114,9 @@ class Function(Environment):
         return text
 
     def states_to_data(
-        self, model_states: StatesModel, env_states: StatesEnv
+        self,
+        model_states: StatesModel,
+        env_states: StatesEnv,
     ) -> Dict[str, typing.Tensor]:
         """
         Extract the data that will be used to make the state transitions.
@@ -136,7 +137,9 @@ class Function(Environment):
         return data
 
     def make_transitions(
-        self, observs: typing.Tensor, actions: typing.Tensor
+        self,
+        observs: typing.Tensor,
+        actions: typing.Tensor,
     ) -> Dict[str, typing.Tensor]:
         """
 
@@ -206,7 +209,9 @@ class Function(Environment):
         if self.custom_domain_check is not None:
             points_in_bounds = judo.logical_not(oobs)
             oobs[points_in_bounds] = self.custom_domain_check(
-                points[points_in_bounds], rewards[points_in_bounds], len(rewards)
+                points[points_in_bounds],
+                rewards[points_in_bounds],
+                len(rewards),
             )
         return oobs
 
@@ -388,7 +393,8 @@ class MinimizerWrapper(Function):
 
         """
         env_states = super(MinimizerWrapper, self).step(
-            model_states=model_states, env_states=env_states
+            model_states=model_states,
+            env_states=env_states,
         )
         new_points, rewards = self.minimizer.minimize_batch(env_states.observs)
         # new_points, rewards = tensor(new_points), tensor(rewards)

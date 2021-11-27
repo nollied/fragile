@@ -8,7 +8,7 @@ import pytest
 
 from fragile.dataviz.plot_saver import PlotSaver
 from tests import IN_CI
-from tests.dataviz.test_swarm_viz import swarm_dict, swarm_names, backends
+from tests.dataviz.test_swarm_viz import backends, swarm_dict, swarm_names
 
 
 @pytest.fixture(params=tuple(product(swarm_names, backends)), scope="class")

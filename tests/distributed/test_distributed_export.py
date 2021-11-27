@@ -5,8 +5,9 @@ from tests.distributed.ray import init_ray, ray
 
 
 def create_cartpole_swarm():
-    from fragile.core import DiscreteEnv, DiscreteUniform, Swarm
     from plangym import ClassicControl
+
+    from fragile.core import DiscreteEnv, DiscreteUniform, Swarm
 
     swarm = Swarm(
         model=lambda x: DiscreteUniform(env=x),

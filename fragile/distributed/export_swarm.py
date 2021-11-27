@@ -263,7 +263,10 @@ class ExportSwarm(SwarmWrapper):
             best_id = judo.copy(walkers.id_walkers[best_ix])
 
             self.swarm.walkers.states.update(
-                best_reward=best_reward, best_state=best_state, best_obs=best_obs, best_id=best_id
+                best_reward=best_reward,
+                best_state=best_state,
+                best_obs=best_obs,
+                best_id=best_id,
             )
             self.swarm.walkers.fix_best()
 
@@ -325,20 +328,29 @@ class ExportSwarm(SwarmWrapper):
         """Get the indexes for selecting the walkers that will be compared in \
         the clone operation."""
         local_ix = random_state.choice(
-            judo.arange(len(self.swarm.walkers)), size=self.n_import, replace=False
+            judo.arange(len(self.swarm.walkers)),
+            size=self.n_import,
+            replace=False,
         )
         if len(walkers) <= self.n_import:
             import_ix = random_state.choice(
-                judo.arange(len(walkers)), size=self.n_import, replace=False
+                judo.arange(len(walkers)),
+                size=self.n_import,
+                replace=False,
             )
         else:
             import_ix = random_state.choice(
-                judo.arange(len(walkers)), size=self.n_import, replace=True
+                judo.arange(len(walkers)),
+                size=self.n_import,
+                replace=True,
             )
         return local_ix, import_ix
 
     def _cross_fai_iteration(
-        self, local_ix: Tensor, import_ix: Tensor, walkers: ExportedWalkers
+        self,
+        local_ix: Tensor,
+        import_ix: Tensor,
+        walkers: ExportedWalkers,
     ) -> Tuple[Tensor, Tensor]:
         """Perform a cloning process of the walkers of the :class:`Swarm` \
         to the imported walkers."""

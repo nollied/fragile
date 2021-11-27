@@ -1,11 +1,13 @@
 import sys
 
+from plangym import AtariEnvironment
+
 from fragile.backend import Backend
 from fragile.backend.slogging import setup as setup_logging
-from plangym import AtariEnvironment
-from fragile.core import DiscreteEnv, NormalContinuous, HistoryTree, GaussianDt, Swarm
-from fragile.optimize.benchmarks import EggHolder
+from fragile.core import DiscreteEnv, GaussianDt, HistoryTree, NormalContinuous, Swarm
 from fragile.distributed.env import ParallelEnv
+from fragile.optimize.benchmarks import EggHolder
+
 
 # Backend.set_backend("torch")
 

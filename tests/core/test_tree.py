@@ -1,6 +1,6 @@
-import networkx
 import judo
 from judo.tests.test_tree import TestNetworkxTree, to_node_id
+import networkx
 import pytest
 
 from fragile.core.tree import HistoryTree

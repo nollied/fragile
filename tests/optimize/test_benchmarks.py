@@ -1,16 +1,12 @@
 import itertools
 
+import judo
+from judo import random_state, tensor
 import numpy
 import pytest
-import judo
-from judo import tensor, random_state
-from fragile.optimize.benchmarks import (
-    EggHolder,
-    LennardJones,
-    Rastrigin,
-    Sphere,
-    StyblinskiTang,
-)
+
+from fragile.optimize.benchmarks import EggHolder, LennardJones, Rastrigin, Sphere, StyblinskiTang
+
 
 wiki_bench_classes = [EggHolder, Rastrigin, Sphere, StyblinskiTang]
 

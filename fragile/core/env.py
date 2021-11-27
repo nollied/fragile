@@ -18,7 +18,10 @@ class Environment(BaseEnvironment):
     """
 
     def __init__(
-        self, states_shape: tuple, observs_shape: tuple, states_dtype: type = judo.float64
+        self,
+        states_shape: tuple,
+        observs_shape: tuple,
+        states_dtype: type = judo.float64,
     ):
         """
         Initialize an :class:`Environment`.
@@ -65,7 +68,14 @@ class Environment(BaseEnvironment):
         return params
 
     def states_from_data(
-        self, batch_size: int, states, observs, rewards, oobs, terminals=None, **kwargs
+        self,
+        batch_size: int,
+        states,
+        observs,
+        rewards,
+        oobs,
+        terminals=None,
+        **kwargs,
     ) -> StatesEnv:
         """Return a new :class:`StatesEnv` object containing the data generated \
         by the environment."""
@@ -89,7 +99,7 @@ class Environment(BaseEnvironment):
             rewards=rewards,
             oobs=oobs,
             terminals=terminals,
-            **kwargs
+            **kwargs,
         )
         return state
 
@@ -139,7 +149,7 @@ class DiscreteEnv(Environment):
         return self._n_actions
 
     def states_to_data(
-        self, model_states: StatesModel, env_states: StatesEnv
+        self, model_states: StatesModel, env_states: StatesEnv,
     ) -> Dict[str, Tensor]:
         """
         Extract the data that will be used to make the state transitions.
@@ -162,7 +172,7 @@ class DiscreteEnv(Environment):
         return data
 
     def make_transitions(
-        self, states: Tensor, actions: Tensor, dt: Union[Tensor, int]
+        self, states: Tensor, actions: Tensor, dt: Union[Tensor, int],
     ) -> Dict[str, Tensor]:
         """
         Step the underlying :class:`plangym.Environment` using the ``step_batch`` \
@@ -170,7 +180,7 @@ class DiscreteEnv(Environment):
         """
         dt = judo.to_numpy(dt) if judo.is_tensor(dt) else dt
         new_states, observs, rewards, ends, infos = self._env.step_batch(
-            actions=judo.to_numpy(actions), states=judo.to_numpy(states), dt=dt
+            actions=judo.to_numpy(actions), states=judo.to_numpy(states), dt=dt,
         )
         game_ends = [inf.get("win", False) for inf in infos]
         data = {

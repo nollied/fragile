@@ -2,6 +2,7 @@ from typing import Callable, Generator, List, Set, Tuple, Union
 
 from judo.typing import Scalar, StateDict, Tensor  # noqa: F401
 
+
 DistanceFunction = Callable[[Tensor, Tensor], Tensor]
 
 NodeId = Union[str, int]

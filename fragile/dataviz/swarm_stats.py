@@ -14,6 +14,7 @@ from fragile.core.swarm import Swarm
 from fragile.core.utils import get_plangym_env
 from fragile.dataviz.streaming import Curve, Histogram, Landscape2D, RGB, Table
 
+
 PLOT_NAMES = ()
 
 
@@ -46,10 +47,16 @@ class SummaryTable(Table):
         default_bokeh_opts = {"width": 350}
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(SummaryTable, self).__init__(
-            mpl_opts=mpl_opts, bokeh_opts=bokeh_opts, *args, **kwargs
+            mpl_opts=mpl_opts,
+            bokeh_opts=bokeh_opts,
+            *args,
+            **kwargs,
         )
 
     def opts(self, title="Run summary", *args, **kwargs):
@@ -68,7 +75,8 @@ class SummaryTable(Table):
         columns = ["Epoch", "Best Reward", "Deaths", "Clones"]
         if swarm is None:
             data = pandas.DataFrame(
-                {"Epoch": [], "Best Reward": [], "Deaths": [], "Clones": []}, columns=columns
+                {"Epoch": [], "Best Reward": [], "Deaths": [], "Clones": []},
+                columns=columns,
             )
         else:
             oobs = swarm.get("oobs")
@@ -113,10 +121,16 @@ class AtariBestFrame(RGB):
         default_bokeh_opts = {"width": 160, "height": 210}
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(AtariBestFrame, self).__init__(
-            mpl_opts=mpl_opts, bokeh_opts=bokeh_opts, *args, **kwargs
+            mpl_opts=mpl_opts,
+            bokeh_opts=bokeh_opts,
+            *args,
+            **kwargs,
         )
 
     @staticmethod
@@ -162,7 +176,9 @@ class AtariBestFrame(RGB):
 class RetroBestFrame(AtariBestFrame):
     def __init__(self, *args, **kwargs):
         super(RetroBestFrame, self).__init__(
-            *args, **kwargs, bokeh_opts={"width": 200, "height": 200}
+            *args,
+            **kwargs,
+            bokeh_opts={"width": 200, "height": 200},
         )
 
     def get_plot_data(self, swarm: Swarm = None) -> numpy.ndarray:
@@ -185,7 +201,7 @@ class BestReward(Curve):
         xlabel: str = "iteration",
         ylabel: str = "Best value",
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -292,7 +308,7 @@ class DistanceHistogram(SwarmHistogram):
         xlabel: str = "Distance",
         ylabel: str = "Frequency",
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -301,7 +317,11 @@ class DistanceHistogram(SwarmHistogram):
         displayed in a :class:`Holomap`.
         """
         super(DistanceHistogram, self).opts(
-            title=title, xlabel=xlabel, ylabel=ylabel, *args, **kwargs
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            *args,
+            **kwargs,
         )
 
     def get_plot_data(self, swarm: Swarm):
@@ -320,7 +340,7 @@ class VirtualRewardHistogram(SwarmHistogram):
         xlabel: str = "Virtual reward",
         ylabel: str = "Frequency",
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -329,7 +349,11 @@ class VirtualRewardHistogram(SwarmHistogram):
         displayed in a :class:`Holomap`.
         """
         super(VirtualRewardHistogram, self).opts(
-            title=title, xlabel=xlabel, ylabel=ylabel, *args, **kwargs
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            *args,
+            **kwargs,
         )
 
     def get_plot_data(self, swarm: Swarm):
@@ -372,7 +396,12 @@ class SwarmLandscape(Landscape2D):
     name = "swarm_landscape"
 
     def __init__(
-        self, use_embeddings: bool = True, margin_high=1.0, margin_low=1.0, *args, **kwargs
+        self,
+        use_embeddings: bool = True,
+        margin_high=1.0,
+        margin_low=1.0,
+        *args,
+        **kwargs,
     ):
         """
         Initialize a :class:`SwarmLandscape2D`.
@@ -502,7 +531,7 @@ class WalkersDensity(SwarmLandscape):
         mpl_opts: dict = None,
         bokeh_opts: dict = None,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a :class:`WalkersDensity`.
@@ -525,10 +554,16 @@ class WalkersDensity(SwarmLandscape):
         }
         default_mpl_opts = {}
         mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts, mpl_opts, default_bokeh_opts, bokeh_opts
+            default_mpl_opts,
+            mpl_opts,
+            default_bokeh_opts,
+            bokeh_opts,
         )
         super(WalkersDensity, self).__init__(
-            mpl_opts=mpl_opts, bokeh_opts=bokeh_opts, *args, **kwargs
+            mpl_opts=mpl_opts,
+            bokeh_opts=bokeh_opts,
+            *args,
+            **kwargs,
         )
 
     def get_z_coords(self, swarm: Swarm, X: numpy.ndarray):
@@ -544,7 +579,7 @@ class WalkersDensity(SwarmLandscape):
         axiswise: bool = True,
         normalize: bool = True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -573,7 +608,7 @@ class WalkersDensity(SwarmLandscape):
                 colorbar=True,
                 filled=True,
                 *args,
-                **kwargs
+                **kwargs,
             ),
             holoviews.opts.Scatter(
                 alpha=0.7,
@@ -583,7 +618,7 @@ class WalkersDensity(SwarmLandscape):
                 axiswise=axiswise,
                 normalize=normalize,
                 *args,
-                **scatter_kwargs
+                **scatter_kwargs,
             ),
             holoviews.opts.NdOverlay(
                 normalize=normalize,

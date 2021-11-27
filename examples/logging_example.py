@@ -14,7 +14,12 @@ def main():
         # Gaussian of mean 0 and std of 10, adapted to the environment bounds
         return NormalContinuous(scale=10, loc=0.0, bounds=env.bounds)
 
-    swarm = FunctionMapper(env=EggHolder, model=gaussian_model, n_walkers=100, max_epochs=5000,)
+    swarm = FunctionMapper(
+        env=EggHolder,
+        model=gaussian_model,
+        n_walkers=100,
+        max_epochs=5000,
+    )
 
     swarm.run(report_interval=500, show_pbar=True)
 

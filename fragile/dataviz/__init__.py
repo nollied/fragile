@@ -3,8 +3,8 @@ from fragile.dataviz.plot_saver import PlotSaver
 from fragile.dataviz.swarm_viz import (
     AtariViz,
     LandscapeViz,
+    RetroViz,
     Summary,
     SwarmViz,
     SwarmViz1D,
-    RetroViz,
 )
