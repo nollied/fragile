@@ -108,7 +108,9 @@ class Function(Environment):
 
     def __repr__(self):
         text = "{} with function {}, obs shape {},".format(
-            self.__class__.__name__, self.function.__name__, self.shape,
+            self.__class__.__name__,
+            self.function.__name__,
+            self.shape,
         )
         return text
 

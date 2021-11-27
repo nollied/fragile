@@ -21,13 +21,19 @@ def create_eggholder_swarm():
         return NormalContinuous(scale=10, loc=0.0, bounds=env.bounds)
 
     swarm = FunctionMapper(
-        env=EggHolder, model=gaussian_model, n_walkers=20, max_epochs=6, start_same_pos=True,
+        env=EggHolder,
+        model=gaussian_model,
+        n_walkers=20,
+        max_epochs=6,
+        start_same_pos=True,
     )
     return swarm
 
 
 def create_atari_swarm():
-    env = AtariEnvironment(name="MsPacman-ram-v0",)
+    env = AtariEnvironment(
+        name="MsPacman-ram-v0",
+    )
     dt = GaussianDt(min_dt=10, max_dt=100, loc_dt=5, scale_dt=2)
     swarm = Swarm(
         model=lambda x: DiscreteUniform(env=x, critic=dt),

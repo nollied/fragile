@@ -5,7 +5,8 @@ from setuptools import find_packages, setup
 
 
 version = SourceFileLoader(
-    "fragile.version", str(Path(__file__).parent / "fragile" / "version.py"),
+    "fragile.version",
+    str(Path(__file__).parent / "fragile" / "version.py"),
 ).load_module()
 
 with open(Path(__file__).with_name("README.md"), encoding="utf-8") as f:
@@ -43,7 +44,7 @@ setup(
     version=version.__version__,
     license="MIT",
     author="Guillem Duran Ballester",
-    author_email="guillem.db@gmail.com",
+    author_email="info@fragile.tech",
     url="https://github.com/FragileTech/fragile",
     download_url="https://github.com/FragileTech/fragile",
     keywords=["reinforcement learning", "artificial intelligence", "monte carlo", "planning"],
@@ -68,6 +69,7 @@ setup(
         "Operating System :: POSIX",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Libraries",
     ],
 )

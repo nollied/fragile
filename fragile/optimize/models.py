@@ -66,7 +66,10 @@ class ESModel(NormalContinuous):
         # There is a chance of performing a gaussian perturbation
         if random_state.random() < self.random_step_prob:
             return super(ESModel, self).sample(
-                batch_size=batch_size, env_states=env_states, model_states=model_states, **kwargs,
+                batch_size=batch_size,
+                env_states=env_states,
+                model_states=model_states,
+                **kwargs,
             )
         observs = (
             env_states.observs

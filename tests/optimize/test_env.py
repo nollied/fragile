@@ -14,7 +14,10 @@ N_WALKERS = 50
 # Backend.set_backend("numpy")
 def function() -> Function:
     return Function.from_bounds_params(
-        function=sphere, shape=(2,), low=tensor([-10, -5]), high=tensor([10, 5]),
+        function=sphere,
+        shape=(2,),
+        low=tensor([-10, -5]),
+        high=tensor([10, 5]),
     )
 
 
@@ -120,7 +123,9 @@ class TestFunction:
     def test_step(self, function_env, batch_size):
         states = function_env.reset(batch_size=batch_size)
         actions = StatesModel(
-            actions=judo.zeros(states.observs.shape), batch_size=batch_size, dt=judo.ones((1, 2)),
+            actions=judo.zeros(states.observs.shape),
+            batch_size=batch_size,
+            dt=judo.ones((1, 2)),
         )
         new_states: StatesEnv = function_env.step(actions, states)
         assert isinstance(new_states, StatesEnv)

@@ -220,7 +220,11 @@ class RGB(StreamingPlot):
         super(RGB, self).__init__(stream=Pipe, plot=holoviews.RGB, data=data, *args, **kwargs)
 
     def opts(
-        self, xaxis=None, yaxis=None, *args, **kwargs,
+        self,
+        xaxis=None,
+        yaxis=None,
+        *args,
+        **kwargs,
     ):
         """
         Update the plot parameters. Same as ``holoviews`` ``opts``.
@@ -315,7 +319,11 @@ class Curve(StreamingPlot):
                 *args,
                 **kwargs
             ),
-            holoviews.opts.NdOverlay(normalize=normalize, framewise=framewise, axiswise=axiswise,),
+            holoviews.opts.NdOverlay(
+                normalize=normalize,
+                framewise=framewise,
+                axiswise=axiswise,
+            ),
         )
 
 
@@ -329,7 +337,11 @@ class Histogram(StreamingPlot):
     name = "histogram"
 
     def __init__(
-        self, n_bins: int = 20, data=None, bokeh_opts: dict = None, mpl_opts: dict = None,
+        self,
+        n_bins: int = 20,
+        data=None,
+        bokeh_opts: dict = None,
+        mpl_opts: dict = None,
     ):
         """
         Initialize a :class:`Histogram`.
@@ -403,13 +415,18 @@ class Histogram(StreamingPlot):
                 *args,
                 **kwargs
             ),
-            holoviews.opts.NdOverlay(normalize=normalize, framewise=framewise, axiswise=axiswise,),
+            holoviews.opts.NdOverlay(
+                normalize=normalize,
+                framewise=framewise,
+                axiswise=axiswise,
+            ),
         )
 
     def get_plot_data(
         self, data: numpy.ndarray
     ) -> Tuple[
-        Tuple[numpy.ndarray, numpy.ndarray], Tuple[Union[Scalar, None], Union[Scalar, None]],
+        Tuple[numpy.ndarray, numpy.ndarray],
+        Tuple[Union[Scalar, None], Union[Scalar, None]],
     ]:
         """
         Calculate the histogram of the streamed data.
@@ -515,7 +532,11 @@ class Bivariate(StreamingPlot):
                 *args,
                 **scatter_kwargs
             ),
-            holoviews.opts.NdOverlay(normalize=normalize, framewise=framewise, axiswise=axiswise,),
+            holoviews.opts.NdOverlay(
+                normalize=normalize,
+                framewise=framewise,
+                axiswise=axiswise,
+            ),
         )
 
 
@@ -598,7 +619,8 @@ class Landscape2D(StreamingPlot):
         scatter = holoviews.Scatter((x, y))
         contour_mesh = mesh * contour * scatter
         return contour_mesh.redim(
-            x=holoviews.Dimension("x", range=xlim), y=holoviews.Dimension("y", range=ylim),
+            x=holoviews.Dimension("x", range=xlim),
+            y=holoviews.Dimension("y", range=ylim),
         )
 
     def get_plot_data(self, data: Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]):
@@ -684,5 +706,9 @@ class Landscape2D(StreamingPlot):
                 *args,
                 **scatter_kwargs
             ),
-            holoviews.opts.NdOverlay(normalize=normalize, framewise=framewise, axiswise=axiswise,),
+            holoviews.opts.NdOverlay(
+                normalize=normalize,
+                framewise=framewise,
+                axiswise=axiswise,
+            ),
         )

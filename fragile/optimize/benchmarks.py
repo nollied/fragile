@@ -44,6 +44,17 @@ def rosenbrock(x) -> np.ndarray:
     )
 
 
+def easom(x) -> np.ndarray:
+    exp_term = (x[:, 0] - np.pi) ** 2 + (x[:, 1] - np.pi) ** 2
+    return -judo.cos(x[:, 0]) * judo.cos(x[:, 1]) * judo.exp(-exp_term)
+
+
+def holder_table(_x) -> np.ndarray:
+    x, y = _x[:, 0], _x[:, 1]
+    exp = np.abs(1 - (np.sqrt(x * x + y * y) / np.pi))
+    return -np.abs(np.sin(x) * np.cos(y) * np.exp(exp))
+
+
 @jit(nopython=True)
 def _lennard_fast(state):
     state = state.reshape(-1, 3)
@@ -78,9 +89,9 @@ class OptimBenchmark(Function):
     benchmark = None
     best_state = None
 
-    def __init__(self, dims: int, function: Callable, *args, **kwargs):
+    def __init__(self, dims: int, function: Callable, **kwargs):
         bounds = self.get_bounds(dims=dims)
-        super(OptimBenchmark, self).__init__(bounds=bounds, function=function, *args, **kwargs)
+        super(OptimBenchmark, self).__init__(bounds=bounds, function=function, **kwargs)
 
     @staticmethod
     def get_bounds(dims: int) -> Bounds:
@@ -171,6 +182,42 @@ class Rosenbrock(OptimBenchmark):
         return tensor(0.0)
 
 
+class Easom(OptimBenchmark):
+    def __init__(self, dims: int = None, *args, **kwargs):
+        super(Easom, self).__init__(dims=2, function=easom, *args, **kwargs)
+
+    @staticmethod
+    def get_bounds(dims):
+        bounds = [(-100.0, 100.0) for _ in range(dims)]
+        return Bounds.from_tuples(bounds)
+
+    @property
+    def best_state(self):
+        return judo.ones(self.shape) * np.pi
+
+    @property
+    def benchmark(self):
+        return tensor(-1)
+
+
+class HolderTable(OptimBenchmark):
+    def __init__(self, dims: int = None, *args, **kwargs):
+        super(HolderTable, self).__init__(dims=2, function=holder_table, *args, **kwargs)
+
+    @staticmethod
+    def get_bounds(dims):
+        bounds = [(-10.0, 10.0) for _ in range(dims)]
+        return Bounds.from_tuples(bounds)
+
+    @property
+    def best_state(self):
+        return tensor([8.05502, 9.66459])
+
+    @property
+    def benchmark(self):
+        return tensor(-19.2085)
+
+
 class LennardJones(OptimBenchmark):
     # http://doye.chem.ox.ac.uk/jon/structures/LJ/tables.150.html
     minima = {
@@ -215,3 +262,6 @@ class LennardJones(OptimBenchmark):
         new_states = random_state.normal(0, scale=1.0, size=states.states.shape)
         states.update(observs=new_states, states=judo.copy(new_states))
         return states
+
+
+ALL_BENCHMARKS = [Sphere, Rastrigin, EggHolder, StyblinskiTang, HolderTable, Easom]

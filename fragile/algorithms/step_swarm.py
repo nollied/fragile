@@ -202,7 +202,11 @@ class MajorityDiscreteModel(RootModel):
     of all the walkers that took the predicted action.
     """
 
-    def predict(self, root_env_states: StatesEnv, walkers: StepWalkers,) -> StatesModel:
+    def predict(
+        self,
+        root_env_states: StatesEnv,
+        walkers: StepWalkers,
+    ) -> StatesModel:
         """
         Select the most frequent ``init_action`` assigned to the internal swarm's walkers.
 
@@ -247,7 +251,11 @@ class FollowBestModel(RootModel):
     ``init_dts`` assigned to the best walker found after the internal swarm run.
     """
 
-    def predict(self, root_env_states: StatesEnv, walkers: StepWalkers,) -> StatesModel:
+    def predict(
+        self,
+        root_env_states: StatesEnv,
+        walkers: StepWalkers,
+    ) -> StatesModel:
         """
         Select the ``init_action`` and ``init_dt`` of the best walker found \
         during the internal swarm run.
@@ -266,7 +274,8 @@ class FollowBestModel(RootModel):
         init_actions = judo.astype(walkers.states.init_actions.flatten(), judo.int)
         best_ix = walkers.get_best_index()
         root_model_states = StatesModel(
-            batch_size=1, state_dict={"actions": {"dtype": judo.int64}, "dt": {"dtype": judo.int}},
+            batch_size=1,
+            state_dict={"actions": {"dtype": judo.int64}, "dt": {"dtype": judo.int}},
         )
         root_model_states.actions[:] = init_actions[best_ix]
         if hasattr(root_model_states, "dt"):
@@ -655,7 +664,9 @@ class StepSwarm(Swarm):
         times = dt + self.root_walker.times
         root_id = tensor(self.walkers.states.id_walkers[best_ix])
         self.root_walkers_states.update(
-            cum_rewards=cum_rewards, times=times, id_walkers=tensor([root_id]),
+            cum_rewards=cum_rewards,
+            times=times,
+            id_walkers=tensor([root_id]),
         )
 
         self.root_walker = OneWalker(
@@ -708,7 +719,9 @@ class StepToBest(StepSwarm):
         times = self.root_walkers_states.times + self.root_walker.times
         root_id = tensor(self.walkers.states.id_walkers[best_ix])
         self.root_walkers_states.update(
-            cum_rewards=cum_rewards, id_walkers=tensor([root_id]), times=times,
+            cum_rewards=cum_rewards,
+            id_walkers=tensor([root_id]),
+            times=times,
         )
         self.root_walker = OneWalker(
             reward=judo.copy(cum_rewards[0]),

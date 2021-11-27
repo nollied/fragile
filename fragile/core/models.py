@@ -233,7 +233,10 @@ class DiscreteModel(_DtModel):
     """It represents the base Model class that handles a discrete set of possible outcomes."""
 
     def __init__(
-        self, n_actions: int = None, critic: BaseCritic = None, env: DiscreteEnv = None,
+        self,
+        n_actions: int = None,
+        critic: BaseCritic = None,
+        env: DiscreteEnv = None,
     ):
         """
         Initialize a :class:`DiscreteModel`.

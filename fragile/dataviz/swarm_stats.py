@@ -159,6 +159,21 @@ class AtariBestFrame(RGB):
         super(AtariBestFrame, self).opts(title=title, *args, **kwargs)
 
 
+class RetroBestFrame(AtariBestFrame):
+    def __init__(self, *args, **kwargs):
+        super(RetroBestFrame, self).__init__(
+            *args, **kwargs, bokeh_opts={"width": 200, "height": 200}
+        )
+
+    def get_plot_data(self, swarm: Swarm = None) -> numpy.ndarray:
+        """Extract the frame from the :class:`AtariEnv` that the target \
+        :class:`Swarm` contains."""
+        if swarm is None:
+            return numpy.zeros((80, 80, 3))
+        obs = swarm.get("best_obs")
+        return obs
+
+
 class BestReward(Curve):
     """Plot a curve that represents the evolution of the best reward found."""
 
@@ -570,7 +585,11 @@ class WalkersDensity(SwarmLandscape):
                 *args,
                 **scatter_kwargs
             ),
-            holoviews.opts.NdOverlay(normalize=normalize, framewise=framewise, axiswise=axiswise,),
+            holoviews.opts.NdOverlay(
+                normalize=normalize,
+                framewise=framewise,
+                axiswise=axiswise,
+            ),
         )
 
     def get_plot_data(self, swarm: Swarm) -> Tuple:
@@ -586,7 +605,8 @@ class WalkersDensity(SwarmLandscape):
         scatter = holoviews.Scatter((x, y))
         contour_mesh = mesh * scatter
         return contour_mesh.redim(
-            x=holoviews.Dimension("x", range=xlim), y=holoviews.Dimension("y", range=ylim),
+            x=holoviews.Dimension("x", range=xlim),
+            y=holoviews.Dimension("y", range=ylim),
         )
 
 

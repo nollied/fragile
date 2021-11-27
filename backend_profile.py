@@ -16,7 +16,11 @@ def main():
 
     def atari_environment():
         game_name = "MsPacman-v0"
-        plangym_env = AtariEnvironment(name=game_name, clone_seeds=True, autoreset=True,)
+        plangym_env = AtariEnvironment(
+            name=game_name,
+            clone_seeds=True,
+            autoreset=True,
+        )
         return DiscreteEnv(env=plangym_env)
 
     # env_callable = lambda: ParallelEnv(atari_environment, n_workers=8)

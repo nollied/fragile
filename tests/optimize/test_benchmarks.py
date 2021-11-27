@@ -15,7 +15,17 @@ from fragile.optimize.benchmarks import (
 wiki_bench_classes = [EggHolder, Rastrigin, Sphere, StyblinskiTang]
 
 
-@pytest.fixture(params=list(itertools.product(wiki_bench_classes, [2,])), scope="class")
+@pytest.fixture(
+    params=list(
+        itertools.product(
+            wiki_bench_classes,
+            [
+                2,
+            ],
+        )
+    ),
+    scope="class",
+)
 def wiki_benchmark(request):
     cls, shape = request.param
     return cls(dims=shape)

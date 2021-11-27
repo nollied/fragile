@@ -198,7 +198,8 @@ class RemoteSwarm(CoreSwarm):
         env_states = await self.env.step.remote(model_states=model_states, env_states=env_states)
         # env_states = ray.get(step_id)
         self.walkers.update_states(
-            env_states=env_states, model_states=model_states,
+            env_states=env_states,
+            model_states=model_states,
         )
         self.update_tree(parent_ids)
 

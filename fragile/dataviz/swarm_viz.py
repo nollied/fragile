@@ -12,6 +12,7 @@ from fragile.dataviz.swarm_stats import (
     DistanceLandscape,
     GridLandscape,
     KDELandscape,
+    RetroBestFrame,
     RewardHistogram,
     RewardLandscape,
     SummaryTable,
@@ -219,6 +220,29 @@ class AtariViz(SwarmViz):
     SWARM_STATS_TYPES = (
         SummaryTable,
         AtariBestFrame,
+        BestReward,
+        DistanceHistogram,
+        VirtualRewardHistogram,
+        RewardHistogram,
+    )
+    PLOT_NAMES = tuple([plot.name for plot in SWARM_STATS_TYPES])
+    SWARM_PLOTS = dict(zip(PLOT_NAMES, SWARM_STATS_TYPES))
+    DEFAULT_COLUMNS = 2
+    DEFAULT_PLOTS = ("summary_table", "best_frame", "best_reward")
+
+
+class RetroViz(SwarmViz):
+    """
+    :class:`Summary` that plots the RGB frame corresponding to the best state \
+    found, in addition to the summary table and best reward plot.
+
+    It also plots the evolution of the best reward found. It can work only with \
+    an :class:`AtariEnv`.
+    """
+
+    SWARM_STATS_TYPES = (
+        SummaryTable,
+        RetroBestFrame,
         BestReward,
         DistanceHistogram,
         VirtualRewardHistogram,

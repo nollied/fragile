@@ -168,7 +168,10 @@ class RayEnv(CoreEnv):
     """Step an :class:`Environment` in parallel using ``ray``."""
 
     def __init__(
-        self, env_callable: Callable, n_workers: int, env_kwargs: dict = None,
+        self,
+        env_callable: Callable,
+        n_workers: int,
+        env_kwargs: dict = None,
     ):
         """
         Initialize a :class:`RayEnv`.

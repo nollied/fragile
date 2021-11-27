@@ -43,7 +43,10 @@ class States(JudoStates):
     """
 
     def clone(
-        self, will_clone: Tensor, compas_ix: Tensor, ignore: Optional[Set[str]] = None,
+        self,
+        will_clone: Tensor,
+        compas_ix: Tensor,
+        ignore: Optional[Set[str]] = None,
     ):
         """
         Clone all the stored data according to the provided arrays.
