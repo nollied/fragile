@@ -83,6 +83,7 @@ class TestExportInterface:
             [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )
         walkers.id_walkers = tensor([999, 777, 333], dtype=dtype.float)
+        walkers.parent_ids = tensor([999, 777, 333], dtype=dtype.float)
         walkers.observs = tensor(
             [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )

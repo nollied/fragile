@@ -1,6 +1,6 @@
 import logging
 import traceback
-from typing import Any, Callable, Iterable, List
+from typing import Any, Callable, Iterable, List, Optional
 
 import judo
 import numpy
@@ -268,6 +268,7 @@ class Swarm(BaseSwarm):
         )
         self.walkers.states.id_walkers[:] = root_id
         self.walkers.states.best_id = root_id
+        self.walkers.states.best_parent_id = root_id
         if self.tree is not None:
 
             self.tree.reset(
@@ -434,10 +435,7 @@ class Swarm(BaseSwarm):
         Make the walkers evolve to their next state sampling an action from the \
         :class:`Model` and applying it to the :class:`Environment`.
         """
-        model_states = self.walkers.model_states
-        env_states = self.walkers.env_states
-
-        parent_ids = judo.copy(self.walkers.states.id_walkers) if self.tree is not None else None
+        env_states, model_states = self.walkers.env_states, self.walkers.model_states
         model_states = self.model.predict(
             env_states=env_states,
             model_states=model_states,
@@ -448,9 +446,10 @@ class Swarm(BaseSwarm):
             env_states=env_states,
             model_states=model_states,
         )
-        self.update_tree(parent_ids)
+        self.walkers.update_ids()
+        self.update_tree()
 
-    def update_tree(self, parent_ids: List[int]) -> None:
+    def update_tree(self, parent_ids: Optional[List[int]] = None) -> None:
         """
         Add a list of walker states represented by `states_ids` to the :class:`Tree`.
 
@@ -458,8 +457,9 @@ class Swarm(BaseSwarm):
             parent_ids: list containing the ids of the parents of the new states added.
         """
         if self.tree is not None:
+            parent_ids = self.walkers.states.parent_ids if parent_ids is None else parent_ids
             self.tree.add_states(
-                parent_ids=judo.to_numpy(parent_ids),
+                parent_ids=parent_ids,
                 env_states=self.walkers.env_states,
                 model_states=self.walkers.model_states,
                 walkers_states=self.walkers.states,

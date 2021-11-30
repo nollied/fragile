@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, Optional, Set
 
 import judo
-from judo import dtype, hasher, tensor
+from judo import dtype, tensor
 from judo.functions.fractalai import relativize
 import numpy
 
@@ -123,12 +123,13 @@ class SimpleWalkers(BaseWalkers):
 
         The returned ids are integers representing the hash of the different states.
         """
-        return tensor(self.env_states.hash_walkers("states"))
+        return tensor(self.env_states.hash_attribute("states"))
 
     def update_ids(self):
         """Update the unique id of each walker and store it in the :class:`StatesWalkers`."""
-        if hasher.uses_true_hash:
-            self.states.update(id_walkers=self.ids())
+        parent_ids = judo.copy(self.states.id_walkers)
+        new_ids = self.ids()
+        self.states.update(id_walkers=new_ids, parent_ids=parent_ids)
 
     @property
     def states(self) -> StatesWalkers:
@@ -317,9 +318,9 @@ class SimpleWalkers(BaseWalkers):
             self.states.reset()
         self.env_states.times = judo.copy(self.env_states.times)
         self.env_states.times[:] = -1.0
-        old_ids = judo.copy(self.states.id_walkers)
+        # old_ids = judo.copy(self.states.id_walkers)
         self.update_states(env_states=env_states, model_states=model_states)
-        self.states.id_walkers = old_ids
+        # self.states.id_walkers = old_ids
         self._epoch = 0
 
     def update_states(
@@ -352,7 +353,7 @@ class SimpleWalkers(BaseWalkers):
                 self._accumulate_and_update_rewards(env_states.rewards)
         if isinstance(model_states, StatesModel):
             self._model_states.update(model_states)
-        self.update_ids()
+        # self.update_ids()
 
     def _accumulate_and_update_rewards(self, rewards: Tensor):
         """
@@ -375,7 +376,7 @@ class SimpleWalkers(BaseWalkers):
     @staticmethod
     def _repr_state(state):
         string = "\n"
-        skip_print = {"observs", "states", "id_walkers", "best_id"}
+        skip_print = {"observs", "states", "id_walkers", "best_id", "parent_ids"}
 
         for k, v in state.items():
             if k in skip_print:
@@ -469,6 +470,7 @@ class Walkers(SimpleWalkers):
             kwargs["critic_score"] = kwargs.get("critic_score", judo.zeros(n_walkers))
         self.dtype = dtype.float
         best_state, best_obs, best_reward, best_id = (None, None, numpy.NINF, None)
+        best_parent_id = best_id
         super(Walkers, self).__init__(
             n_walkers=n_walkers,
             env_state_params=env_state_params,
@@ -483,6 +485,7 @@ class Walkers(SimpleWalkers):
             best_obs=best_obs,
             best_state=best_state,
             best_id=best_id,
+            best_parent_id=best_parent_id,
             **kwargs,
         )
         self.critic = critic
@@ -590,6 +593,7 @@ class Walkers(SimpleWalkers):
                 best_state=best_state,
                 best_obs=best_obs,
                 best_id=self.states.id_walkers[ix],
+                best_parent_id=self.states.parent_ids[ix],
                 best_time=self.env_states.times[ix],
             )
 
@@ -600,6 +604,7 @@ class Walkers(SimpleWalkers):
             self.env_states.observs[-1] = self.states.best_obs
             self.states.cum_rewards[-1] = float(self.states.best_reward)
             self.states.id_walkers[-1] = self.states.best_id
+            self.states.parent_ids[-1] = self.states.best_parent_id
             self.env_states.states[-1] = self.states.best_state
             self.env_states.times[-1] = self.states.best_time
 
@@ -626,15 +631,14 @@ class Walkers(SimpleWalkers):
             model_states=model_states,
             walkers_states=walkers_states,
         )
-        best_ix = (
-            self.env_states.rewards.argmin() if self.minimize else self.env_states.rewards.argmax()
-        )
+        best_ix = self.get_best_index()
         self.states.update(
             best_reward=self.env_states.rewards[best_ix],
             best_obs=self.env_states.observs[best_ix],
             best_state=self.env_states.states[best_ix],
             best_time=self.env_states.times[best_ix],
             best_id=self.states.id_walkers[best_ix],
+            best_parent_id=self.states.parent_ids[best_ix],
         )
         if self.critic is not None:
             critic_score = self.critic.reset(

@@ -167,6 +167,7 @@ class StatesWalkers(States):
     Attributes:
         id_walkers: Array of of integers that uniquely identify a given state. \
                     They are obtained by hashing the states.
+        parent_ids: Array of integers that uniquely identify the id_walkers of the previous state.
         compas_clone: Array of integers containing the index of the walkers \
                       selected as companions for cloning.
         processed_rewards: Array of normalized rewards. It contains positive \
@@ -212,8 +213,10 @@ class StatesWalkers(States):
         self.clone_probs = None
         self.in_bounds = None
         self.id_walkers = None
+        self.parent_ids = None
         # This is only to allow __repr__. Should be overridden after reset
         self.best_id = None
+        self.best_parent_id = None
         self.best_obs = None
         self.best_state = None
         self.best_reward = numpy.NINF
@@ -235,6 +238,7 @@ class StatesWalkers(States):
         """
         params = {
             "id_walkers": {"dtype": dtype.hash_type},
+            "parent_ids": {"dtype": dtype.hash_type},
             "compas_clone": {"dtype": dtype.int64},
             "processed_rewards": {"dtype": dtype.float},
             "virtual_rewards": {"dtype": dtype.float},
@@ -253,6 +257,7 @@ class StatesWalkers(States):
         clone, compas = self.will_clone, self.compas_clone
         self.cum_rewards[clone] = self.cum_rewards[compas][clone]
         self.id_walkers[clone] = self.id_walkers[compas][clone]
+        self.parent_ids[clone] = self.parent_ids[compas][clone]
         self.virtual_rewards[clone] = self.virtual_rewards[compas][clone]
         return clone, compas
 
@@ -264,6 +269,7 @@ class StatesWalkers(States):
             setattr(self, attr, None)
         self.update(
             id_walkers=judo.zeros(self.n, dtype=dtype.hash_type),
+            parent_ids=judo.zeros(self.n, dtype=dtype.hash_type),
             compas_dist=judo.arange(self.n),
             compas_clone=judo.arange(self.n),
             processed_rewards=judo.zeros(self.n, dtype=dtype.float),
@@ -299,6 +305,7 @@ class OneWalker(States):
         observ: Tensor,
         reward: Scalar,
         id_walker=None,
+        parent_id=None,
         time=0.0,
         state_dict: StateDict = None,
         **kwargs,
@@ -312,6 +319,7 @@ class OneWalker(States):
             reward: typing.Scalar value representing the reward of the walker.
             id_walker: Hash of the provided State. If None it will be calculated when the
                        the :class:`OneWalker` is initialized.
+            parent_id: Hash of the previous state of the walker.
             state_dict: External :class:`typing.StateDict` that overrides the default values.
             time: Time step of the current walker. Measures the length of the path followed \
                   by the walker.
@@ -321,6 +329,7 @@ class OneWalker(States):
 
         """
         self.id_walkers = None
+        self.parent_ids = None
         self.rewards = None
         self.observs = None
         self.states = None
@@ -354,6 +363,9 @@ class OneWalker(States):
         self.id_walkers[:] = (
             judo.copy(id_walker.squeeze()) if id_walker is not None else hasher.hash_tensor(state)
         )
+        self.parent_ids[:] = (
+            judo.copy(parent_id.squeeze()) if parent_id is not None else self.id_walkers[:]
+        )
         self.update(**kwargs)
 
     def __repr__(self):
@@ -382,6 +394,7 @@ class OneWalker(States):
         """
         params = {
             "id_walkers": {"dtype": dtype.hash_type},
+            "parent_ids": {"dtype": dtype.hash_type},
             "rewards": {"dtype": self._rewards_dtype},
             "observs": {"dtype": self._observs_dtype, "size": self._observs_size},
             "states": {"dtype": self._states_dtype, "size": self._states_size},

@@ -24,6 +24,7 @@ class ExportDummy(ExportSwarm):
         self.param_server.best.update(
             states=self.swarm.walkers.states.best_state,
             id_walkers=self.swarm.walkers.states.best_id,
+            parent_ids=self.swarm.walkers.states.best_parent_id,
             rewards=self.swarm.walkers.states.best_reward,
             observs=self.swarm.walkers.states.best_obs,
         )
@@ -91,6 +92,7 @@ class TestExportedSwarm:
         assert (walkers.rewards == export_swarm.walkers.states.cum_rewards[indexes]).all()
         assert (walkers.states == export_swarm.walkers.env_states.states[indexes]).all()
         assert (walkers.id_walkers == export_swarm.walkers.states.id_walkers[indexes]).all()
+        assert (walkers.parent_ids == export_swarm.walkers.states.parent_ids[indexes]).all()
 
     @pytest.mark.parametrize("export_swarm", swarm_params, indirect=True)
     def test_get_export_index(self, export_swarm):
@@ -139,12 +141,14 @@ class TestExportedSwarm:
         walkers.rewards = tensor([999.0, 2.0])
         walkers.states = tensor([0.0, 1.0])
         walkers.id_walkers = tensor([10.0, 11.0])
+        walkers.parent_ids = tensor([10.0, 11.0])
         walkers.observs = tensor([[0, 0, 0, 0], [2, 3, 1, 2]], dtype=dtype.float)
         export_swarm.import_best(walkers)
         assert export_swarm.best_reward == 999
         assert export_swarm.walkers.states.best_state == walkers.states[0]
         assert (export_swarm.walkers.states.best_obs == walkers.observs[0]).all()
         assert export_swarm.walkers.states.best_id == walkers.id_walkers[0]
+        assert export_swarm.walkers.states.best_parent_id == walkers.parent_ids[0]
 
     @pytest.mark.parametrize("export_swarm", swarm_params, indirect=True)
     def test_clone_to_imported(self, export_swarm):
@@ -152,6 +156,7 @@ class TestExportedSwarm:
         walkers.rewards = tensor([999, 777, 333], dtype=dtype.float)
         walkers.states = tensor([999, 777, 333], dtype=dtype.float)
         walkers.id_walkers = tensor([999, 777, 333], dtype=dtype.float)
+        walkers.parent_ids = tensor([999, 777, 333], dtype=dtype.float)
         walkers.observs = tensor(
             [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )
@@ -185,6 +190,7 @@ class TestExportedSwarm:
             [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )
         walkers.id_walkers = tensor([999, 777, 333], dtype=dtype.float)
+        walkers.parent_ids = tensor([999, 777, 333], dtype=dtype.float)
         walkers.observs = tensor(
             [[999, 999, 999, 999], [777, 777, 777, 777], [333, 333, 333, 333]], dtype=dtype.float
         )

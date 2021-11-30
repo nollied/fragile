@@ -27,6 +27,7 @@ class ExportedWalkers(States):
 
         """
         self.id_walkers = None
+        self.parent_ids = None
         self.rewards = None
         self.observs = None
         self.states = None
@@ -39,7 +40,10 @@ class ExportedWalkers(States):
                     walkers_dict[k] = v
         super(ExportedWalkers, self).__init__(batch_size=batch_size, state_dict=walkers_dict)
         # Set to ones to avoid empty sequences that may cause errors
-        self.update(id_walkers=judo.ones(self.n, dtype=dtype.hash_type))
+        self.update(
+            id_walkers=judo.ones(self.n, dtype=dtype.hash_type),
+            parent_ids=judo.ones(self.n, dtype=dtype.hash_type),
+        )
 
     def get_params_dict(self) -> StateDict:
         """Return a dictionary containing the param_dict to build an instance \
@@ -47,6 +51,7 @@ class ExportedWalkers(States):
         """
         params = {
             "id_walkers": {"dtype": dtype.hash_type},
+            "parent_ids": {"dtype": dtype.hash_type},
             "rewards": {"dtype": dtype.float32},
             "observs": {"dtype": dtype.float32},
             "states": {"dtype": dtype.float64},
@@ -88,6 +93,7 @@ class ExportedWalkers(States):
         new_walkers = ExportedWalkers(batch_size=len(self))
         new_walkers.update(
             id_walkers=judo.copy(self.id_walkers),
+            parent_ids=judo.copy(self.parent_ids),
             rewards=judo.copy(self.rewards),
             states=judo.copy(self.states),
             observs=judo.copy(self.observs),
@@ -132,6 +138,7 @@ class BestWalker(ExportedWalkers):
             self.observs = judo.copy(walkers.observs[ix])
             self.rewards = judo.copy(walkers.rewards[ix])
             self.id_walkers = judo.copy(walkers.id_walkers[ix])
+            self.parent_ids = judo.copy(walkers.parent_ids[ix])
 
 
 class ExportSwarm(SwarmWrapper):
@@ -262,12 +269,14 @@ class ExportSwarm(SwarmWrapper):
             best_state = judo.copy(walkers.states[best_ix])
             best_obs = judo.copy(walkers.observs[best_ix])
             best_id = judo.copy(walkers.id_walkers[best_ix])
+            best_parent_id = judo.copy(walkers.parent_ids[best_ix])
 
             self.swarm.walkers.states.update(
                 best_reward=best_reward,
                 best_state=best_state,
                 best_obs=best_obs,
                 best_id=best_id,
+                best_parent_id=best_parent_id,
             )
             self.swarm.walkers.fix_best()
 
@@ -286,10 +295,17 @@ class ExportSwarm(SwarmWrapper):
         observs = self.swarm.walkers.env_states.observs[indexes]
         rewards = self.swarm.walkers.states.cum_rewards[indexes]
         id_walkers = self.swarm.walkers.states.id_walkers[indexes]
+        parent_ids = self.swarm.walkers.states.parent_ids[indexes]
         state_dict = self.swarm.env.get_params_dict()
         state_dict.update(self.swarm.walkers.states.get_params_dict())
         walkers = ExportedWalkers(batch_size=len(indexes), state_dict=state_dict)
-        walkers.update(states=states, observs=observs, rewards=rewards, id_walkers=id_walkers)
+        walkers.update(
+            states=states,
+            observs=observs,
+            rewards=rewards,
+            id_walkers=id_walkers,
+            parent_ids=parent_ids,
+        )
         return walkers
 
     def _imported_best_is_better(self, walkers: ExportedWalkers) -> bool:
@@ -312,6 +328,7 @@ class ExportSwarm(SwarmWrapper):
     ) -> None:
         """Clone the :class:`Swarm` selected walkers to the target imported walkers."""
         clone_ids = tensor(walkers.id_walkers[import_ix][compas_ix][will_clone])
+        clone_parent_ids = tensor(walkers.parent_ids[import_ix][compas_ix][will_clone])
         clone_rewards = tensor(walkers.rewards[import_ix][compas_ix][will_clone])
         clone_states = tensor(walkers.states[import_ix][compas_ix][will_clone])
         clone_obs = tensor(walkers.observs[import_ix][compas_ix][will_clone])
@@ -320,6 +337,7 @@ class ExportSwarm(SwarmWrapper):
         for (ix, wc) in zip(local_ix, will_clone):
             if wc:
                 self.swarm.walkers.states.id_walkers[ix] = clone_ids[i]
+                self.swarm.walkers.states.parent_ids[ix] = clone_parent_ids[i]
                 self.swarm.walkers.states.cum_rewards[ix] = clone_rewards[i]
                 self.swarm.walkers.env_states.states[ix] = clone_states[i]
                 self.swarm.walkers.env_states.observs[ix] = clone_obs[i]
@@ -479,6 +497,7 @@ class ParamServer:
         index = random_state.randint(0, len(walkers))
         walkers.rewards[index] = self.best.rewards
         walkers.id_walkers[index] = self.best.id_walkers
+        walkers.parent_ids[index] = self.best.parent_ids
         walkers.observs[index] = self.best.observs
         walkers.states[index] = self.best.states
         return walkers

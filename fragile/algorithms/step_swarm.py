@@ -606,13 +606,15 @@ class StepSwarm(Swarm):
         best_is_oob = self.root_env_states.oobs[0]
         return best_is_oob or max_epochs_reached or max_reward_reached
 
-    def update_tree(self, states_ids: List[int]) -> None:
+    def update_tree(self, states_ids: List[int] = None) -> None:
         """
         Add a list of walker states represented by `states_ids` to the :class:`Tree`.
 
         Args:
             states_ids: list containing the ids of the new states added.
         """
+        if states_ids is None:
+            return
         if self.tree is not None:
             self.tree.add_states(
                 parent_ids=states_ids,
