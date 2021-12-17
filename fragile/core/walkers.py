@@ -404,7 +404,7 @@ class SimpleWalkers(BaseWalkers):
 
 class Walkers(SimpleWalkers):
     """
-    The Walkers is a data structure that takes care of all the data involved \
+    The :class:`Walkers` is a data structure that takes care of all the data involved \
     in making a Swarm evolve.
     """
 
@@ -448,7 +448,7 @@ class Walkers(SimpleWalkers):
                                to the walkers observations and it will return a \
                                vector of typing_.Scalars. Defaults to l2 norm.
             ignore_clone: Dictionary containing the attribute values that will \
-                          not be cloned. Its keys can be be either "env", of \
+                          not be cloned. Its keys can be  either "env", of \
                           "model", to reference the `env_states` and the \
                           `model_states`. Its values are a set of strings with \
                           the names of the attributes that will not be cloned.

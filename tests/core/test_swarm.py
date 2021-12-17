@@ -112,8 +112,10 @@ class TestSwarm:
         swarm.reset(root_walker=root_walker)
         swarm_best_id = swarm.best_id
         root_walker_id = root_walker.id_walkers
+        best_obs = swarm.best_obs
         assert (swarm.best_state == state).all()
-        assert (swarm.best_obs == obs).all(), (obs, tensor(swarm.best_obs))
+        assert judo.is_tensor(best_obs), tensor(best_obs)
+        assert (best_obs == obs).all(), (obs, tensor(best_obs))
         assert swarm.best_reward == reward
         assert (swarm.walkers.env_states.observs == obs).all()
         assert (swarm.walkers.env_states.states == state).all()

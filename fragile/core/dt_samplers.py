@@ -10,15 +10,15 @@ from fragile.core.typing import StateDict
 
 class BaseDtSampler(BaseCritic):
     """
-    :class:`Critic` that returns contains the attribute ``dt`` in its :class:`States`.
+    :class:`Critic` that returns contains the attribute `dt` in its :class:`States`.
 
-    The ``dt`` value represents the number of time steps a given action will \
-    be applied. The returned values are floats so the critic can also be used \
-    to sample a learning rate. If you need discrete values transform the sampled \
-    array to integers in the :class:`Environment`, or change the data type \
+    The `dt` value represents the number of time steps a given action will
+    be applied. The returned values are floats so the critic can also be used
+    to sample a learning rate. If you need discrete values transform the sampled
+    array to integers in the :class:`Environment`, or change the data type
     overriding the default ``get_params_dict`` behavior.
 
-    The ``dt`` value will also be replicated in the ``critic_score`` attribute \
+    The `dt` value will also be replicated in the ``critic_score`` attribute
     of the states to comply with the critic interface.
     """
 
@@ -27,8 +27,8 @@ class BaseDtSampler(BaseCritic):
         Initialize a :class:`BaseDtSampler`.
 
         Args:
-            discrete_values: If ``True`` return discrete time step values. If \
-                            ``False`` allow to return floating point time steps.
+            discrete_values: If ``True`` return discrete time step values. If
+            ``False`` allow to return floating point time steps.
         """
         self._dtype = dtype.float if not discrete_values else int
         super(BaseDtSampler, self).__init__()

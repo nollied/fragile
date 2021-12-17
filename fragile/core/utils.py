@@ -1,3 +1,5 @@
+from typing import Union
+
 import judo
 import numpy
 
@@ -10,14 +12,16 @@ NUMPY_IGNORE_WARNINGS_PARAMS = {
 }
 
 
-def get_plangym_env(swarm: "Swarm") -> "plangym.BaseEnvironment":  # noqa: F821
+def get_plangym_env(
+    obj: Union["Swarm", "BaseEnvironment"],  # noqa: F821
+) -> "plangym.BaseEnvironment":  # noqa: F821
     """Return the :class:`plangym.Environment` of the target Swarm."""
     from plangym import BaseEnvironment as PlangymEnv, ParallelEnvironment as PlangymParallelEnv
 
     from fragile import core
     from fragile.distributed import ParallelEnv as FragileParallelEnv, RayEnv
 
-    fragile_env = swarm.env
+    fragile_env = obj.env if isinstance(obj, core.Swarm) else obj
     if isinstance(fragile_env, (FragileParallelEnv, RayEnv)):
         fragile_env = fragile_env._local_env
     if isinstance(fragile_env, core.DiscreteEnv):

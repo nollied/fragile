@@ -149,9 +149,9 @@ class AtariBestFrame(RGB):
         """
         env = get_plangym_env(swarm)
         state = judo.to_numpy(state)
-        env.set_state(state.astype(numpy.uint8))
+        env.set_state(state)
         env.step(0)
-        return numpy.asarray(env.ale.getScreenRGB(), dtype=numpy.uint8)
+        return numpy.asarray(env.get_image(), dtype=numpy.uint8)
 
     def get_plot_data(self, swarm: Swarm = None) -> numpy.ndarray:
         """Extract the frame from the :class:`AtariEnv` that the target \

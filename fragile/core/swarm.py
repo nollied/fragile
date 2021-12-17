@@ -2,7 +2,9 @@ import logging
 import traceback
 from typing import Any, Callable, Iterable, List, Optional
 
+import einops
 import judo
+from judo.functions.notebook import running_in_ipython
 import numpy
 
 from fragile.core.base_classes import BaseCritic, BaseEnvironment, BaseModel, BaseSwarm
@@ -77,7 +79,7 @@ class Swarm(BaseSwarm):
         )
         self._notebook_container = None
         self._use_notebook_widget = use_notebook_widget
-        self._ipython_mode = judo.running_in_ipython() and not force_logging
+        self._ipython_mode = running_in_ipython() and not force_logging
         self.setup_notebook_container()
 
     def __len__(self) -> int:
@@ -477,7 +479,8 @@ class Swarm(BaseSwarm):
     def _update_env_with_root(self, root_walker, env_states) -> StatesEnv:
         env_states.rewards[:] = root_walker.rewards
         env_states.states[:] = root_walker.states
-        env_states.observs = judo.tile(root_walker.observs, (len(env_states), 1))
+        # Observs in the root walker have a batch dimension of 1. Broadcast to all walkers
+        env_states.observs[:] = root_walker.observs[0].copy()
         return env_states
 
 

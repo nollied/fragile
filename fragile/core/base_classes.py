@@ -7,10 +7,7 @@ from fragile.core.typing import StateDict, Tensor
 
 
 class StatesOwner:
-    """
-    Every class that stores its data in :class:`States` must inherit \
-    from this class.
-    """
+    """Every class that stores its data in :class:`States` inherits  from this class."""
 
     random_state = random_state
     STATE_CLASS = States
@@ -50,12 +47,12 @@ class StatesOwner:
         Initialize a :class:`States` with the data provided as kwargs.
 
         Args:
-            batch_size: Number of elements in the first dimension of the \
-                       :class:`State` attributes.
+            batch_size: Number of elements in the first dimension of the
+                :class:`State` attributes.
             **kwargs: Attributes that will be added to the returned :class:`States`.
 
         Returns:
-            A new :class:`States` created with the class ``params_dict`` updated \
+            A new :class:`States` created with the class ``params_dict`` updated
             with the attributes passed as keyword arguments.
 
         """
@@ -177,10 +174,10 @@ class BaseCritic(StatesOwner):
 
 class BaseEnvironment(StatesOwner):
     """
-    The Environment is in charge of stepping the walkers, acting as an state \
+    The Environment is in charge of stepping the walkers, acting as a state \
     transition function.
 
-    For every different problem a new Environment needs to be implemented \
+    For every different problem, a new Environment needs to be implemented
     following the :class:`BaseEnvironment` interface.
 
     """
@@ -191,10 +188,10 @@ class BaseEnvironment(StatesOwner):
         """
         Return the current instance of :class:`BaseEnvironment`.
 
-        This is used to avoid defining a ``environment_callable `` as \
-        ``lambda: environment_instance`` when initializing a :class:`Swarm`. If the \
-        :class:`Environment` needs is passed to a remote process, you may need \
-        to write custom serialization for it, or resort to creating an appropriate \
+        This is used to avoid defining a ``environment_callable `` as
+        ``lambda: environment_instance`` when initializing a :class:`Swarm`. If the
+        :class:`Environment` is passed to a remote process, you may need
+        to write custom serialization for it, or resort to creating an appropriate
         ``environment_callable``.
         """
         return self
@@ -235,12 +232,12 @@ class BaseEnvironment(StatesOwner):
         Initialize a :class:`StatesEnv` with the data provided as kwargs.
 
         Args:
-            batch_size: Number of elements in the first dimension of the \
-                       :class:`State` attributes.
+            batch_size: Number of elements in the first dimension of the
+                :class:`State` attributes.
             **kwargs: Attributes that will be added to the returned :class:`States`.
 
         Returns:
-            A new :class:`StatesEmv` created with the ``params_dict``, and \
+            A new :class:`StatesEmv` created with the ``params_dict``, and
             updated with the attributes passed as keyword arguments.
 
         """
@@ -256,10 +253,10 @@ class BaseEnvironment(StatesOwner):
         and return the values that will be passed to ``make_transitions``.
 
         Args:
-            model_states: :class:`StatesModel` representing the data to be used \
-                         to act on the environment.
-            env_states: :class:`StatesEnv` representing the data to be set in \
-                       the environment.
+            model_states: :class:`StatesModel` representing the data to be used
+                to act on the environment.
+            env_states: :class:`StatesEnv` representing the data to be set in
+                the environment.
 
         Returns:
             Tuple of arrays or dictionary of arrays. If the returned value is a \
@@ -275,18 +272,18 @@ class BaseEnvironment(StatesOwner):
         using the input data to make the corresponding state transition.
 
         Args:
-            *args: List of arguments passed if the returned value from the \
-                  ``states_to_data`` function of the class was a tuple.
-            **kwargs: Keyword arguments passed if the returned value from the \
-                  ``states_to_data`` function of the class was a dictionary.
+            *args: List of arguments passed if the returned value from the
+                ``states_to_data`` function of the class was a tuple.
+            **kwargs: Keyword arguments passed if the returned value from the
+                ``states_to_data`` function of the class was a dictionary.
 
         Returns:
-            Dictionary containing the data representing the state of the environment \
-            after the state transition. The keys of the dictionary are the names of \
-            the data attributes and its values are arrays representing a batch of \
+            Dictionary containing the data representing the state of the environment
+            after the state transition. The keys of the dictionary are the names of
+            the data attributes and its values are arrays representing a batch of
             new values for that attribute.
 
-            The :class:`StatesEnv` returned by ``step`` will contain the returned \
+            The :class:`StatesEnv` returned by ``step`` will contain the returned
             data.
 
         """
@@ -301,7 +298,7 @@ class BaseEnvironment(StatesOwner):
         using the following structure::
 
             import numpy as numpy
-            # Example of an state_dict for planning.
+            # Example of a state_dict for planning.
             state_dict = {
                 "states": {"size": self._env.get_state().shape, "dtype": numpy.int64},
                 "observs": {"size": self._env.observation_space.shape, "dtype": numpy.float32},
@@ -320,13 +317,13 @@ class BaseEnvironment(StatesOwner):
 
         Args:
             batch_size: Number of walkers that the resulting state will have.
-            env_states: States class used to set the environment to an arbitrary \
-                        state.
+            env_states: States class used to set the environment to an arbitrary
+                state.
             kwargs: Additional keyword arguments not related to environment data.
 
         Returns:
-            States class containing the information of the environment after the \
-             reset.
+            States class containing the information of the environment after the
+            reset.
 
         """
         raise NotImplementedError
