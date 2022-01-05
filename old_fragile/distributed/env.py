@@ -428,11 +428,11 @@ class ParallelEnv(EnvWrapper):
         Set the environment to the target and perform an step in parallel.
 
         Args:
-            model_states: States corresponding to the model data.
-            env_states: States class containing the state data to be set on the Environment.
+            model_states: SwarmState corresponding to the model data.
+            env_states: SwarmState class containing the state data to be set on the Environment.
 
         Returns:
-            States containing the information that describes the new state of the Environment.
+            SwarmState containing the information that describes the new state of the Environment.
 
         """
         transition_data = self.states_to_data(model_states=model_states, env_states=env_states)
@@ -474,12 +474,12 @@ class ParallelEnv(EnvWrapper):
 
         Args:
             batch_size: Number of walkers that the resulting state will have.
-            env_states: States class used to set the environment to an arbitrary \
+            env_states: SwarmState class used to set the environment to an arbitrary \
                         state.
             kwargs: Additional keyword arguments not related to environment data.
 
         Returns:
-            States class containing the information of the environment after the \
+            SwarmState class containing the information of the environment after the \
              reset.
 
         """
@@ -645,7 +645,7 @@ class RayEnv(EnvWrapper):
     ) -> StatesEnv:
         """
         Reset the environment to the start of a new episode and returns a new \
-        States instance describing the state of the Environment.
+        SwarmState instance describing the state of the Environment.
 
         Args:
             batch_size: Number of walkers that the returned state will have.
@@ -655,7 +655,7 @@ class RayEnv(EnvWrapper):
             **kwargs: Passed to the internal environment ``reset``.
 
         Returns:
-            States instance describing the state of the Environment. The first \
+            SwarmState instance describing the state of the Environment. The first \
             dimension of the data tensors (number of walkers) will be equal to \
             batch_size.
 

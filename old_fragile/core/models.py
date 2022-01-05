@@ -16,7 +16,7 @@ class Model(BaseModel):
     computation steps to any kind of Model.
 
     It defines, resets, handles parameter checking, raises errors and inserts \
-    the calculated actions into its corresponding :class:`States`.
+    the calculated actions into its corresponding :class:`SwarmState`.
     """
 
     def __init__(self, critic: Optional[BaseCritic] = None, env=None):
@@ -43,9 +43,9 @@ class Model(BaseModel):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the environment data.
-            env_states: States corresponding to the model data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the environment data.
+            env_states: SwarmState corresponding to the model data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
             Tuple containing a tensor with the sampled actions and the new model states variable.
@@ -61,19 +61,19 @@ class Model(BaseModel):
         walkers_states: StatesWalkers = None,
     ) -> StatesModel:
         """
-        Return States containing the data to interact with the environment and \
+        Return SwarmState containing the data to interact with the environment and \
         a dt attribute containing clipped gaussian samples.
 
         Args:
             batch_size: Number of new points to the sampled. If None, env_states.n \
                         will be used to determine the batch_size.
-            model_states: States corresponding to the environment data.
-            env_states: States corresponding to the model data. Required if \
+            model_states: SwarmState corresponding to the environment data.
+            env_states: SwarmState corresponding to the model data. Required if \
                         batch_size is None.
-            walkers_states: States corresponding to the walkers data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
-            :class:`States` variable containing the calculated actions.
+            :class:`SwarmState` variable containing the calculated actions.
 
         """
         if batch_size is None and env_states is None:
@@ -101,7 +101,7 @@ class Model(BaseModel):
 
         Args:
             batch_size: Number of walkers that the new model `State`.
-            model_states: States corresponding to the environment data.
+            model_states: SwarmState corresponding to the environment data.
             *args: Passed to `predict`.
             **kwargs: Passed to `predict`.
 
@@ -293,11 +293,11 @@ class DiscreteUniform(DiscreteModel):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the environment data.
+            model_states: SwarmState corresponding to the environment data.
             kwargs: passed to the :class:`Critic`.
 
         Returns:
-            :class:`States` variable containing the calculated actions and dt.
+            :class:`SwarmState` variable containing the calculated actions and dt.
 
         """
         actions = self.random_state.randint(0, self.n_actions, size=batch_size)
@@ -365,7 +365,7 @@ class BinarySwap(DiscreteModel):
             kwargs: Passed to the :class:`Critic`.
 
         Returns:
-            :class:`States` variable containing the calculated actions and dt.
+            :class:`SwarmState` variable containing the calculated actions and dt.
 
         """
         import numpy
@@ -454,11 +454,11 @@ class ContinuousUniform(ContinuousModel):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the model data.
+            model_states: SwarmState corresponding to the model data.
             kwargs: passed to the :class:`Critic`.
 
         Returns:
-            States containing the new sampled discrete random values inside \
+            SwarmState containing the new sampled discrete random values inside \
             `state.actions` attribute.
 
         """
@@ -518,13 +518,13 @@ class NormalContinuous(ContinuousModel):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the environment data.
-            env_states: States corresponding to the model data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the environment data.
+            env_states: SwarmState corresponding to the model data.
+            walkers_states: SwarmState corresponding to the walkers data.
             kwargs: passed to the :class:`Critic`.
 
         Returns:
-            :class:`States` variable containing the calculated actions and dt.
+            :class:`SwarmState` variable containing the calculated actions and dt.
 
         """
         actions = self.random_state.normal(

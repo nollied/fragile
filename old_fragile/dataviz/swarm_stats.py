@@ -140,7 +140,7 @@ class AtariBestFrame(RGB):
 
         Args:
             swarm: Swarm containing the target environment.
-            state: States that will be used to extract the frame.
+            state: SwarmState that will be used to extract the frame.
 
         Returns:
             Array of size (210, 160, 3) containing the RGB frame representing \
@@ -264,7 +264,7 @@ class SwarmHistogram(Histogram):
 
         Args:
             swarm: Target :class:`Swarm`.
-            attr: Attribute of the target :class:`States` that will be plotted.
+            attr: Attribute of the target :class:`SwarmState` that will be plotted.
 
         Returns:
             Histogram containing the target data.

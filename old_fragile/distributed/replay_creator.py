@@ -84,9 +84,9 @@ class ReplayCreator:
                         node when parsing a data generator. For example: \
                         "next_observs" will reference the observation of the \
                         next node.
-            node_names: Names of the data attributes of the :class:`States` that \
+            node_names: Names of the data attributes of the :class:`SwarmState` that \
                        will be stored as node attributes in the internal graph.
-            edge_names: Names of the data attributes of the :class:`States` that \
+            edge_names: Names of the data attributes of the :class:`SwarmState` that \
                        will be stored as edge attributes in the internal graph.
             report_interval: Ignored. Only used to match swarm interface.
             show_pbar: If ``True`` A progress bar will display the progress of \

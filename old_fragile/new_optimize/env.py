@@ -1,124 +1,12 @@
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Tuple, Union
 
 import judo
 from judo import Backend, Bounds, dtype, random_state, tensor, typing
 import numpy
-from plangym.core import PlanEnvironment
+from scipy.optimize import Bounds as ScipyBounds, minimize
 
-from fragile.core.api_classes import EnvironmentAPI, SwarmAPI
-from fragile.core.typing import InputDict, StateData, StateDict
-
-
-_no_value = "__no_value__"
-
-
-class PlangymEnv(EnvironmentAPI):
-    def __init__(self, plangym_env: PlanEnvironment, swarm: Optional[SwarmAPI] = None):
-        self._plangym_env = plangym_env
-        state, obs = plangym_env.reset()
-        *_, infos = plangym_env.step(plangym_env.sample_action())
-        self._has_rgb = "rgb" in infos
-
-        self.rgb_shape = infos["rgb"].shape if self.has_rgb else None
-        states_shape = None if not plangym_env.STATE_IS_ARRAY else state.shape
-        states_dtype = type(state) if not plangym_env.STATE_IS_ARRAY else state.dtype
-        self._has_terminals = (
-            hasattr(self.plangym_env, "possible_to_win") and self.plangym_env.possible_to_win
-        )
-
-        self._states_shape = states_shape
-        self._states_dtype = states_dtype
-        super(PlangymEnv, self).__init__(
-            swarm=swarm,
-            observs_dtype=obs.dtype,
-            observs_shape=obs.shape,
-            action_shape=plangym_env.action_space.shape,
-            action_dtype=plangym_env.action_space.dtype,
-        )
-
-    @property
-    def states_shape(self):
-        return self._states_shape
-
-    @property
-    def states_dtype(self):
-        return self._states_dtype
-
-    @property
-    def plangym_env(self) -> "PlanEnvironment":
-        return self._plangym_env
-
-    @property
-    def inputs(self) -> InputDict:
-        plangym_inputs = {"states": {"clone": True}, "dt": {"optional": True, "default": 1}}
-        return {**super(PlangymEnv, self).inputs, **plangym_inputs}
-
-    @property
-    def outputs(self) -> Tuple[str, ...]:
-        outputs = ("n_steps", "infos", "states")
-        if self._has_terminals:
-            outputs = outputs + ("terminals",)
-        if self.has_rgb:
-            outputs = outputs + ("rgb",)
-        return super(PlangymEnv, self).outputs + outputs
-
-    @property
-    def param_dict(self) -> StateDict:
-        plangym_params = {
-            "n_steps": {"dtype": dtype.int32},
-            "infos": {"shape": None, "dtype": dict},
-            "states": {"shape": self._states_shape, "dtype": self._states_dtype},
-        }
-        if self._has_terminals:
-            plangym_params["terminals"] = {"dtype": dtype.bool}
-        if self.has_rgb:
-            plangym_params["rgb"] = {"shape": self.rgb_shape, "dtype": dtype.uint8}
-        return {**super(PlangymEnv, self).param_dict, **plangym_params}
-
-    @property
-    def has_rgb(self) -> bool:
-        return self._has_rgb
-
-    def __getattr__(self, item):
-        return getattr(self.plangym_env, item)
-
-    def step(self, actions, states, dt=1):
-        step_data = self.plangym_env.step_batch(actions=actions, states=states, dt=dt)
-        new_states, observs, rewards, oobs, infos = step_data
-        n_steps = [info.get("n_steps", 1) for info in infos]
-        states_data = dict(
-            observs=observs,
-            rewards=rewards,
-            oobs=oobs,
-            infos=infos,
-            n_steps=n_steps,
-            states=new_states,
-        )
-        if self._has_terminals:
-            terminals = [info["terminal"] for info in infos] if "terminal" in infos[0] else oobs
-            states_data["terminals"] = terminals
-        if self.has_rgb:
-            terminals = [info["rgb"] for info in infos]
-            states_data["rgb"] = terminals
-        return states_data
-
-    def reset(
-        self,
-        inplace: bool = True,
-        root_walker: Optional[StateData] = None,
-        states: Optional[StateData] = None,
-        **kwargs,
-    ):
-        if root_walker is None:
-            state, observs = self.plangym_env.reset()
-            new_states = [state for _ in range(len(self.swarm))]
-        else:
-            new_states = self.get("states")
-            observs = self.get("observs")
-        if inplace:
-            self.update(states=new_states, observs=observs)
-        else:
-            return dict(states=new_states, observs=observs)
+from fragile.new_core.api_classes import EnvironmentAPI
+from fragile.new_core.typing import StateData, StateDict
 
 
 class Function(EnvironmentAPI):
@@ -157,7 +45,8 @@ class Function(EnvironmentAPI):
                     be evaluated.
 
         """
-        if not isinstance(bounds, Bounds) and bounds.__class__.__name__ != "Box":
+
+        if not isinstance(bounds, (Bounds)) and bounds.__class__.__name__ != "Box":
             raise TypeError(f"Bounds needs to be an instance of Bounds or Box, found {bounds}")
         self.function = function
         self.bounds = bounds if isinstance(bounds, Bounds) else Bounds.from_space(bounds)
@@ -204,14 +93,14 @@ class Function(EnvironmentAPI):
                       typing.Scalar. This function is applied to a batch of walker \
                       observations.
             shape: Input shape of the solution vector without taking into account \
-                    the batch dimension. For example, a two-dimensional function \
+                    the batch dimension. For example, a two dimensional function \
                     applied to a batch of 5 walkers will have shape=(2,), even though
                     the observations will have shape (5, 2)
-            high: Upper bound of the function domain. If it's a typing.Scalar it will \
-                  be the same for all dimensions. If it's a numpy array it will \
+            high: Upper bound of the function domain. If it's an typing.Scalar it will \
+                  be the same for all dimensions. If its a numpy array it will \
                   be the upper bound for each dimension.
-            low: Lower bound of the function domain. If it's a typing.Scalar it will \
-                  be the same for all dimensions. If it's a numpy array it will \
+            low: Lower bound of the function domain. If it's an typing.Scalar it will \
+                  be the same for all dimensions. If its a numpy array it will \
                   be the lower bound for each dimension.
             custom_domain_check: Callable that checks points inside the bounds \
                     to know if they are in a custom domain when it is not just \
@@ -226,7 +115,7 @@ class Function(EnvironmentAPI):
             and not (judo.is_tensor(low) or isinstance(low, (list, tuple)))
             and shape is None
         ):
-            raise TypeError("Need to specify shape or high or low must be an array.")
+            raise TypeError("Need to specify shape or high or low must be a numpy array.")
         bounds = Bounds(high=high, low=low, shape=shape)
         return Function(function=function, bounds=bounds, custom_domain_check=custom_domain_check)
 
@@ -256,32 +145,17 @@ class Function(EnvironmentAPI):
         oobs = self.calculate_oobs(points=new_points, rewards=rewards)
         return dict(observs=new_points, rewards=rewards, oobs=oobs)
 
-    def reset(
-        self,
-        inplace: bool = True,
-        root_walker: Optional[StateData] = None,
-        states: Optional[StateData] = None,
-        **kwargs,
-    ) -> Union[None, StateData]:
+    def reset(self, inplace: bool = True, **kwargs) -> Union[None, StateData]:
         """
         Reset the :class:`Function` to the start of a new episode and returns \
         an :class:`StatesEnv` instance describing its internal state.
         """
-        if root_walker is None:
-            new_points = self.sample_action(batch_size=self.swarm.n_walkers)
-            actions = judo.zeros_like(new_points) if self._actions_as_perturbations else new_points
-            rewards = self.function(new_points).flatten()
-        else:
-            new_points = self.get("observs")
-            rewards = self.get("rewards")
-            actions = (
-                self.get("actions") if self._actions_as_perturbations else self.get("observs")
-            )
-
-        if inplace:
-            self.update(observs=new_points, rewards=rewards, actions=actions)
-        else:
-            return dict(observs=new_points, rewards=rewards, actions=actions)
+        n_walkers = self.swarm.n_walkers
+        oobs = judo.zeros(n_walkers, dtype=judo.bool)
+        new_points = self.sample_action(batch_size=n_walkers)
+        actions = judo.zeros_like(new_points) if self._actions_as_perturbations else new_points
+        rewards = self.function(new_points).flatten()
+        return dict(observs=new_points, rewards=rewards, oobs=oobs, actions=actions)
 
     def calculate_oobs(self, points: typing.Tensor, rewards: typing.Tensor) -> typing.Tensor:
         """
@@ -328,3 +202,155 @@ class Function(EnvironmentAPI):
             size=shape,
         )
         return new_points
+
+
+class Minimizer:
+    """Apply ``scipy.optimize.minimize`` to a :class:`Function`."""
+
+    def __init__(self, function: Function, bounds=None, *args, **kwargs):
+        """
+        Initialize a :class:`Minimizer`.
+
+        Args:
+            function: :class:`Function` that will be minimized.
+            bounds: :class:`Bounds` defining the domain of the minimization \
+                    process. If it is ``None`` the :class:`Function` :class:`Bounds` \
+                    will be used.
+            *args: Passed to ``scipy.optimize.minimize``.
+            **kwargs: Passed to ``scipy.optimize.minimize``.
+
+        """
+        self.env = function
+        self.function = function.function
+        self.bounds = self.env.bounds if bounds is None else bounds
+        self.args = args
+        self.kwargs = kwargs
+
+    def minimize(self, x: typing.Tensor):
+        """
+        Apply ``scipy.optimize.minimize`` to a single point.
+
+        Args:
+            x: Array representing a single point of the function to be minimized.
+
+        Returns:
+            Optimization result object returned by ``scipy.optimize.minimize``.
+
+        """
+
+        def _optimize(_x):
+            try:
+                _x = _x.reshape((1,) + _x.shape)
+                y = self.function(_x)
+            except (ZeroDivisionError, RuntimeError):
+                y = numpy.inf
+            return y
+
+        bounds = ScipyBounds(
+            ub=judo.to_numpy(self.bounds.high) if self.bounds is not None else None,
+            lb=judo.to_numpy(self.bounds.low) if self.bounds is not None else None,
+        )
+        return minimize(_optimize, x, bounds=bounds, *self.args, **self.kwargs)
+
+    def minimize_point(self, x: typing.Tensor) -> Tuple[typing.Tensor, typing.Scalar]:
+        """
+        Minimize the target function passing one starting point.
+
+        Args:
+            x: Array representing a single point of the function to be minimized.
+
+        Returns:
+            Tuple containing a numpy array representing the best solution found, \
+            and the numerical value of the function at that point.
+
+        """
+        optim_result = self.minimize(x)
+        point = tensor(optim_result["x"])
+        reward = tensor(float(optim_result["fun"]))
+        return point, reward
+
+    def minimize_batch(self, x: typing.Tensor) -> Tuple[typing.Tensor, typing.Tensor]:
+        """
+        Minimize a batch of points.
+
+        Args:
+            x: Array representing a batch of points to be optimized, stacked \
+               across the first dimension.
+
+        Returns:
+            Tuple of arrays containing the local optimum found for each point, \
+            and an array with the values assigned to each of the points found.
+
+        """
+        x = judo.to_numpy(judo.copy(x))
+        with Backend.use_backend("numpy"):
+            result = judo.zeros_like(x)
+            rewards = judo.zeros((x.shape[0], 1))
+            for i in range(x.shape[0]):
+                new_x, reward = self.minimize_point(x[i, :])
+                result[i, :] = new_x
+                rewards[i, :] = float(reward)
+        self.bounds.high = tensor(self.bounds.high)
+        self.bounds.low = tensor(self.bounds.low)
+        result, rewards = tensor(result), tensor(rewards)
+        return result, rewards
+
+
+class MinimizerWrapper(Function):
+    """
+    Wrapper that applies a local minimization process to the observations \
+    returned by a :class:`Function`.
+    """
+
+    def __init__(self, function: Function, *args, **kwargs):
+        """
+        Initialize a :class:`MinimizerWrapper`.
+
+        Args:
+            function: :class:`Function` to be minimized after each step.
+            *args: Passed to the internal :class:`Optimizer`.
+            **kwargs: Passed to the internal :class:`Optimizer`.
+
+        """
+        self.unwrapped = function
+        self.minimizer = Minimizer(function=self.unwrapped, *args, **kwargs)
+
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        """Return the shape of the wrapped environment."""
+        return self.unwrapped.shape
+
+    @property
+    def function(self) -> Callable:
+        """Return the function of the wrapped environment."""
+        return self.unwrapped.function
+
+    @property
+    def bounds(self) -> Bounds:
+        """Return the bounds of the wrapped environment."""
+        return self.unwrapped.bounds
+
+    @property
+    def custom_domain_check(self) -> Callable:
+        """Return the custom_domain_check of the wrapped environment."""
+        return self.unwrapped.custom_domain_check
+
+    def __getattr__(self, item):
+        return getattr(self.unwrapped, item)
+
+    def __repr__(self):
+        return self.unwrapped.__repr__()
+
+    def setup(self, swarm):
+        self.unwrapped.setup(swarm)
+
+    def make_transitions(self):
+        """
+        Perform a local optimization process to the observations returned after \
+        calling ``make_transitions`` on the wrapped :class:`Function`.
+        """
+        self.unwrapped.make_transitions()
+        new_points, rewards = self.minimizer.minimize_batch(self.get("observs"))
+        # new_points, rewards = tensor(new_points), tensor(rewards)
+        oobs = self.calculate_oobs(new_points, rewards)
+        self.update(observs=new_points, rewards=rewards.flatten(), oobs=oobs)

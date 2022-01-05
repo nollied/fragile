@@ -1,10 +1,11 @@
-from typing import Callable, Optional
+from typing import Callable
 
 from judo.data_structures.bounds import Bounds
 
-from fragile.core.states import SwarmState
-from fragile.core.swarm import Swarm
-from fragile.optimize.env import Function
+from fragile.new_core.models import Bounds, NormalContinuous
+from fragile.new_core.states import SwarmState
+from fragile.new_core.swarm import Swarm
+from fragile.new_optimize.env import Function
 
 
 class FunctionMapper(Swarm):
@@ -12,26 +13,33 @@ class FunctionMapper(Swarm):
 
     def __init__(
         self,
+        model: Callable = lambda x: NormalContinuous(bounds=x.bounds),
         accumulate_rewards: bool = False,
         minimize: bool = True,
         start_same_pos: bool = False,
+        *args,
         **kwargs,
     ):
         """
         Initialize a :class:`FunctionMapper`.
 
         Args:
-            accumulate_rewards: If `True` the rewards obtained after transitioning
-                to a new state will accumulate. If `False` only the last reward
-                will be taken into account.
-            minimize: If `True` the algorithm will perform a minimization process.
-                If `False` it will be a maximization process.
-            start_same_pos: If `True` all the walkers will have the same starting position.
+            model: A function that returns an instance of a :class:`Model`.
+            accumulate_rewards: If ``True`` the rewards obtained after transitioning \
+                                to a new state will accumulate. If ``False`` only the last \
+                                reward will be taken into account.
+            minimize: If ``True`` the algorithm will perform a minimization \
+                      process. If ``False`` it will be a maximization process.
+            start_same_pos: If ``True`` all the walkers will have the same \
+                            starting position.
+            *args: Passed :class:`Swarm` __init__.
             **kwargs: Passed :class:`Swarm` __init__.
         """
         super(FunctionMapper, self).__init__(
+            model=model,
             accumulate_rewards=accumulate_rewards,
             minimize=minimize,
+            *args,
             **kwargs,
         )
         self.start_same_pos = start_same_pos
@@ -66,8 +74,10 @@ class FunctionMapper(Swarm):
 
     def reset(
         self,
-        root_walker: Optional["OneWalker"] = None,
-        states: Optional[SwarmState] = None,
+        root_walker: OneWalker = None,
+        walkers_states: StatesWalkers = None,
+        model_states: StatesModel = None,
+        env_states: StatesEnv = None,
     ):
         """
         Reset the :class:`fragile.Walkers`, the :class:`Function` environment, the \
@@ -85,9 +95,12 @@ class FunctionMapper(Swarm):
                             states of the :class:`Walkers`.
 
         """
-        super(FunctionMapper, self).reset(root_walker=root_walker, states=states)
+        super(FunctionMapper, self).reset(
+            root_walker=root_walker,
+            walkers_states=walkers_states,
+            model_states=model_states,
+            env_states=env_states,
+        )
         if self.start_same_pos:
-            self.states.observs[:] = self.get("observs")[0]
-            states = self.get("states", None, raise_error=False)
-            if states is not None:
-                self.swarm.states.states[:] = states[0]
+            self.walkers.env_states.observs[:] = self.walkers.env_states.observs[0]
+            self.walkers.env_states.states[:] = self.walkers.env_states.states[0]

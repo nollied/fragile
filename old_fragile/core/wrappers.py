@@ -100,7 +100,7 @@ class ModelWrapper(BaseWrapper, Model):
         *args,
         **kwargs,
     ) -> StatesModel:
-        return self.unwrapped.__class__.sample(
+        return self.unwrapped.__class__.select_dt(
             self.unwrapped,
             batch_size=batch_size,
             model_states=model_states,
@@ -445,7 +445,7 @@ class TreeWrapper(BaseWrapper, HistoryTree):
         walkers_states: States = None,
         n_iter: int = None,
     ) -> None:
-        return self.unwrapped.__class__.add_states(
+        return self.unwrapped.__class__.update(
             self.unwrapped,
             parent_ids=parent_ids,
             env_states=env_states,

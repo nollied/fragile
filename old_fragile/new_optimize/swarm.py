@@ -2,9 +2,9 @@ from typing import Callable, Optional
 
 from judo.data_structures.bounds import Bounds
 
-from fragile.core.states import SwarmState
-from fragile.core.swarm import Swarm
-from fragile.optimize.env import Function
+from fragile.new_core.states import SwarmState
+from fragile.new_core.swarm import Swarm
+from fragile.new_optimize.env import Function
 
 
 class FunctionMapper(Swarm):

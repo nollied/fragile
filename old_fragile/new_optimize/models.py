@@ -1,11 +1,11 @@
 from judo import random_state
 import numpy
 
-from fragile.core.policy import Gaussian
-from old_fragile.core.states import StatesEnv, StatesModel, StatesWalkers
+from fragile.core.models import NormalContinuous
+from fragile.core.states import StatesEnv, StatesModel, StatesWalkers
 
 
-class ESModel(Gaussian):
+class ESModel(NormalContinuous):
     """
     The ESModel implements an evolutionary strategy policy.
 
@@ -100,7 +100,7 @@ class ESModel(Gaussian):
         )
 
 
-class CMAES(Gaussian):
+class CMAES(NormalContinuous):
     """Implementation of CMAES algorithm from https://en.wikipedia.org/wiki/CMA-ES."""
 
     def __init__(self, sigma: float, virtual_reward_fitness: bool = False, *args, **kwargs):

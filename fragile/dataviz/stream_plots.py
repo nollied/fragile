@@ -1,5 +1,4 @@
-"""Contains the necessary logic to create ``holoviews`` plots that accept streaming data."""
-from typing import Any, Callable, Tuple, Union
+from typing import Callable, Tuple, Union
 
 import holoviews
 from holoviews import Store
@@ -7,41 +6,72 @@ from holoviews.streams import Buffer, Pipe
 import judo
 from judo.typing import Scalar
 import numpy
+import pandas
 from scipy.interpolate import griddata
 
+from fragile.core.api_classes import Callback
 
-class Plot:
-    """Base class that manages the creation of ``holoviews`` plots."""
+
+class StreamingPlot:
+    """Represents a holoviews plot updated with streamed data."""
 
     name = ""
 
     def __init__(
         self,
         plot: Callable,
-        data: Any = None,
+        stream=Pipe,
+        data=None,
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
-        *args,
         **kwargs,
     ):
         """
-        Initialize a :class:`Plot`.
+        Initialize a :class:`StreamingPlot`.
 
         Args:
-            plot: Callable that returns an holoviews plot.
-            data: Passed to :class:`Plot`.``get_plot_data``. Contains the necessary data to \
-                  initialize the plot.
-            bokeh_opts: Default options for the plot when rendered using the \
-                       "bokeh" backend.
-            mpl_opts: Default options for the plot when rendered using the \
-                    "matplotlib" backend.
+            plot: Callable that returns a holoviews plot.
+            stream: Class used to stream data to the plot.
+            data: Passed to :class:`Plot`.``get_plot_data``. Contains the necessary data to
+                initialize the plot.
             args: Passed to ``opts``.
             kwargs: Passed to ``opts``.
         """
+        self.data_stream = None
         self.plot = None
         self.bokeh_opts = bokeh_opts if bokeh_opts is not None else {}
         self.mpl_opts = mpl_opts if mpl_opts is not None else {}
-        self.init_plot(plot, data, *args, **kwargs)
+        self.init_stream(stream, data)
+        self.init_plot(plot, **kwargs)
+
+    def get_default_data(self):
+        raise NotImplementedError()
+
+    def preprocess_data(self, data):
+        """Perform the necessary data wrangling for plotting the data."""
+        return data
+
+    def send(self, data) -> None:
+        """Stream data to the plot and keep track of how many times the data has been streamed."""
+        data = self.preprocess_data(data)
+        self.data_stream.send(data)
+
+    def init_plot(self, plot: Callable, **kwargs) -> None:
+        """
+        Initialize the holoviews plot to accept streaming data.
+
+        Args:
+            plot: Callable that returns a holoviews plot.
+            kwargs: Passed to ``opts``.
+
+        """
+        self.plot = holoviews.DynamicMap(plot, streams=[self.data_stream])
+        self.opts(**kwargs)
+
+    def init_stream(self, stream, data=None):
+        """Initialize the data stream that will be used to stream data to the plot."""
+        data = self.preprocess_data(data) if data is not None else self.get_default_data()
+        self.data_stream = stream(data=data)
 
     @staticmethod
     def update_default_opts(mpl_default, passed_mpl, bokeh_default, passed_bokeh):
@@ -59,27 +89,6 @@ class Plot:
             mpl_opts = mpl_default
         return mpl_opts, bokeh_opts
 
-    def get_plot_data(self, data: Any):
-        """Perform the necessary data wrangling for plotting the data."""
-        raise NotImplementedError
-
-    def init_plot(self, plot: Callable, data=None, *args, **kwargs):
-        """
-        Initialize the holoviews plot.
-
-        Args:
-            plot: Callable that returns an holoviews plot.
-            data: Passed to :class:`Plot`.``get_plot_data``. Contains the necessary data to \
-                  initialize the plot.
-            args: Passed to ``opts``.
-            kwargs: Passed to ``opts``.
-
-        """
-        data = self.get_plot_data(data)
-        self.plot = plot(data)
-        opt_dict = self.update_kwargs(**kwargs)
-        self.opts(*args, **opt_dict)
-
     def update_kwargs(self, **kwargs):
         """Update the supplied options kwargs with backend specific parameters."""
         if Store.current_backend == "bokeh":
@@ -91,66 +100,12 @@ class Plot:
         opt_dict.update(kwargs)
         return opt_dict
 
-    def opts(self, *args, **kwargs):
-        """Update the plot parameters. Same as ``holoviews`` ``opts``."""
+    def opts(self, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
         if self.plot is None:
             return
         opt_dict = self.update_kwargs(**kwargs)
-        self.plot = self.plot.opts(*args, **opt_dict)
-
-
-class StreamingPlot(Plot):
-    """Represents a an holoviews plot updated with streamed data."""
-
-    name = ""
-
-    def __init__(self, plot: Callable, stream=Pipe, data=None, *args, **kwargs):
-        """
-        Initialize a :class:`StreamingPlot`.
-
-        Args:
-            plot: Callable that returns an holoviews plot.
-            stream: Class used to stream data to the plot.
-            data: Passed to :class:`Plot`.``get_plot_data``. Contains the necessary data to \
-                  initialize the plot.
-            args: Passed to ``opts``.
-            kwargs: Passed to ``opts``.
-        """
-        self.data_stream = None
-        self.epoch = 0
-        self.init_stream(stream, data)
-        super(StreamingPlot, self).__init__(plot=plot, *args, **kwargs)
-
-    def get_plot_data(self, data):
-        """Perform the necessary data wrangling for plotting the data."""
-        return judo.to_numpy(data)
-
-    def stream_data(self, data) -> None:
-        """Stream data to the plot and keep track of how many times the data has been streamed."""
-        data = self.get_plot_data(data)
-        self.data_stream.send(data)
-        self.epoch += 1
-
-    def init_plot(self, plot: Callable, data=None, *args, **kwargs) -> None:
-        """
-        Initialize the holoviews plot to accept streaming data.
-
-        Args:
-            plot: Callable that returns an holoviews plot.
-            data: Passed to :class:`Plot`.``get_plot_data``. Contains the necessary data to \
-                  initialize the plot.
-            args: Passed to ``opts``.
-            kwargs: Passed to ``opts``.
-
-        """
-        self.plot = holoviews.DynamicMap(plot, streams=[self.data_stream])
-        self.opts(*args, **kwargs)
-
-    def init_stream(self, stream, data=None):
-        """Initialize the data stream that will be used to stream data to the plot."""
-        self.epoch = 0
-        data = self.get_plot_data(data)
-        self.data_stream = stream(data=data)
+        self.plot = self.plot.opts(**opt_dict)
 
 
 class Table(StreamingPlot):
@@ -164,7 +119,6 @@ class Table(StreamingPlot):
         stream=Pipe,
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
-        *args,
         **kwargs,
     ):
         """
@@ -173,11 +127,8 @@ class Table(StreamingPlot):
         Args:
             data: Data to initialize the stream.
             stream: :class:`holoviews.stream` type. Defaults to :class:`Pipe`.
-            bokeh_opts: Default options for the plot when rendered using the \
-                       "bokeh" backend.
-            mpl_opts: Default options for the plot when rendered using the \
-                    "matplotlib" backend.
-            *args: Passed to :class:`StreamingPlot`.
+            bokeh_opts: Default options for the plot when rendered using the "bokeh" backend.
+            mpl_opts: Default options for the plot when rendered using the "matplotlib" backend.
             **kwargs: Passed to :class:`StreamingPlot`.
 
         """
@@ -198,9 +149,11 @@ class Table(StreamingPlot):
             data=data,
             mpl_opts=mpl_opts,
             bokeh_opts=bokeh_opts,
-            *args,
             **kwargs,
         )
+
+    def get_default_data(self):
+        return pandas.DataFrame()
 
     def opts(self, *args, **kwargs):
         """
@@ -218,9 +171,12 @@ class RGB(StreamingPlot):
 
     name = "rgb"
 
-    def __init__(self, data=None, *args, **kwargs):
+    def __init__(self, data=None, **kwargs):
         """Initialize a :class:`RGB`."""
-        super(RGB, self).__init__(stream=Pipe, plot=holoviews.RGB, data=data, *args, **kwargs)
+        super(RGB, self).__init__(stream=Pipe, plot=holoviews.RGB, data=data, **kwargs)
+
+    def get_default_data(self):
+        return []
 
     def opts(
         self,
@@ -257,6 +213,8 @@ class Curve(StreamingPlot):
         data=None,
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
+        data_names=("x", "y"),
+        **kwargs,
     ):
         """
         Initialize a :class:`Curve`.
@@ -288,23 +246,27 @@ class Curve(StreamingPlot):
             default_bokeh_opts,
             bokeh_opts,
         )
+        self._data_names = data.columns.values if data is not None else data_names
         super(Curve, self).__init__(
             stream=get_stream,
             plot=holoviews.Curve,
             data=data,
             mpl_opts=mpl_opts,
             bokeh_opts=bokeh_opts,
+            **kwargs,
         )
+
+    def get_default_data(self):
+        return pandas.DataFrame(columns=self._data_names)
 
     def opts(
         self,
-        title="",
+        title="curve",
         xlabel: str = "x",
         ylabel: str = "y",
         framewise: bool = True,
         axiswise: bool = True,
         normalize: bool = True,
-        *args,
         **kwargs,
     ):
         """
@@ -322,7 +284,6 @@ class Curve(StreamingPlot):
                 framewise=framewise,
                 axiswise=axiswise,
                 normalize=normalize,
-                *args,
                 **kwargs,
             ),
             holoviews.opts.NdOverlay(
@@ -348,6 +309,7 @@ class Histogram(StreamingPlot):
         data=None,
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
+        **kwargs,
     ):
         """
         Initialize a :class:`Histogram`.
@@ -376,6 +338,7 @@ class Histogram(StreamingPlot):
             data=data,
             mpl_opts=mpl_opts,
             bokeh_opts=bokeh_opts,
+            **kwargs,
         )
 
     @staticmethod
@@ -431,6 +394,9 @@ class Histogram(StreamingPlot):
             ),
         )
 
+    def preprocess_data(self, data):
+        return self.get_plot_data(data)
+
     def get_plot_data(
         self,
         data: numpy.ndarray,
@@ -456,6 +422,9 @@ class Histogram(StreamingPlot):
         data[numpy.isnan(data)] = 0.0
         return numpy.histogram(data, self.n_bins), self.xlim
 
+    def get_default_data(self):
+        return self.get_plot_data(None)
+
 
 class Bivariate(StreamingPlot):
     """
@@ -466,7 +435,7 @@ class Bivariate(StreamingPlot):
 
     name = "bivariate"
 
-    def __init__(self, data=None, bokeh_opts=None, mpl_opts=None, *args, **kwargs):
+    def __init__(self, data=None, bokeh_opts=None, mpl_opts=None, **kwargs):
         """
         Initialize a :class:`Bivariate`.
 
@@ -481,7 +450,7 @@ class Bivariate(StreamingPlot):
         """
 
         def bivariate(data):
-            return holoviews.Bivariate(data, *args, **kwargs)
+            return holoviews.Bivariate(data, **kwargs)
 
         default_bokeh_opts = {
             "height": 350,
@@ -556,6 +525,9 @@ class Bivariate(StreamingPlot):
             ),
         )
 
+    def get_default_data(self):
+        return []
+
 
 class Landscape2D(StreamingPlot):
     """
@@ -575,13 +547,15 @@ class Landscape2D(StreamingPlot):
         invert_cmap: bool = False,
         mpl_opts: dict = None,
         bokeh_opts: dict = None,
+        plot_scatter: bool = True,
+        **kwargs,
     ):
         """
         Initialize a :class:`Landscape2d`.
 
         Args:
             n_points: Number of points per dimension used to create the \
-                      meshgrid grid that will be used to interpolate the data.
+                      mesh-grid grid that will be used to interpolate the data.
             data: Initial data for the plot.
             bokeh_opts: Default options for the plot when rendered using the \
                        "bokeh" backend.
@@ -592,6 +566,7 @@ class Landscape2D(StreamingPlot):
 
         """
         self.n_points = n_points
+        self._plot_scatter = plot_scatter
         self.invert_cmap = invert_cmap
         self.xlim = (None, None)
         self.ylim = (None, None)
@@ -615,10 +590,10 @@ class Landscape2D(StreamingPlot):
             data=data,
             mpl_opts=mpl_opts,
             bokeh_opts=bokeh_opts,
+            **kwargs,
         )
 
-    @staticmethod
-    def plot_landscape(data):
+    def plot_landscape(self, data):
         """
         Plot the data as an energy landscape.
 
@@ -635,13 +610,19 @@ class Landscape2D(StreamingPlot):
         x, y, xx, yy, z, xlim, ylim = data
         zz = griddata((x, y), z, (xx, yy), method="linear")
         mesh = holoviews.QuadMesh((xx, yy, zz))
-        contour = holoviews.operation.contours(mesh, levels=8)
-        scatter = holoviews.Scatter((x, y))
-        contour_mesh = mesh * contour * scatter
+        contour = holoviews.operation.contours(mesh, levels=16)
+
+        contour_mesh = mesh * contour
+        if self._plot_scatter:
+            scatter = holoviews.Scatter((x, y))
+            contour_mesh = contour_mesh * scatter
         return contour_mesh.redim(
             x=holoviews.Dimension("x", range=xlim),
             y=holoviews.Dimension("y", range=ylim),
         )
+
+    def preprocess_data(self, data):
+        return self.get_plot_data(data)
 
     def get_plot_data(self, data: Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]):
         """Create the meshgrid needed to interpolate the target data points."""
@@ -649,9 +630,15 @@ class Landscape2D(StreamingPlot):
         x, y, z = judo.to_numpy(x), judo.to_numpy(y), judo.to_numpy(z)
         # target grid to interpolate to
         xi = numpy.linspace(x.min(), x.max(), self.n_points)
-        yi = numpy.linspace(x.min(), x.max(), self.n_points)
+        yi = numpy.linspace(y.min(), y.max(), self.n_points)
         xx, yy = numpy.meshgrid(xi, yi)
         return x, y, xx, yy, z, self.xlim, self.ylim
+
+    def get_default_data(self):
+        X = numpy.random.standard_normal((10, 2))
+        z = numpy.random.standard_normal(10)
+        data = X[:, 0], X[:, 1], z
+        return self.get_plot_data(data)
 
     def opts(
         self,
@@ -732,3 +719,23 @@ class Landscape2D(StreamingPlot):
                 axiswise=axiswise,
             ),
         )
+
+
+class PlotCallback(Callback):
+    def __init__(self, report_interval: int = 1, **kwargs):
+        self.report_interval = report_interval
+        super(PlotCallback, self).__init__(**kwargs)
+
+    def after_evolve(self):
+        super(PlotCallback, self).before_walkers()
+        if self.swarm.epoch % self.report_interval == 0:
+            self.send()
+
+    def send(self):
+        raise NotImplementedError()
+
+    def panel(self):
+        raise NotImplementedError()
+
+    def run_end(self):
+        self.send()

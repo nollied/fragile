@@ -7,21 +7,14 @@ from fragile.core.typing import StateDict, Tensor
 
 
 class StatesOwner:
-    """Every class that stores its data in :class:`States` inherits  from this class."""
+    """Every class that stores its data in :class:`SwarmState` inherits  from this class."""
 
-    random_state = random_state
     STATE_CLASS = States
-
-    @classmethod
-    def seed(cls, seed: int = None):
-        """Set the random seed of the random number generator."""
-        seed = random_state.seed() if seed is None else seed
-        cls.random_state.seed(seed)
 
     @classmethod
     def get_params_dict(cls) -> StateDict:
         """
-        Return an state_dict to be used for instantiating an States class.
+        Return an state_dict to be used for instantiating an SwarmState class.
 
         In order to define the tensors, a state_dict dictionary needs to be specified \
         using the following structure::
@@ -44,15 +37,15 @@ class StatesOwner:
 
     def states_from_data(self, batch_size: int, **kwargs) -> States:
         """
-        Initialize a :class:`States` with the data provided as kwargs.
+        Initialize a :class:`SwarmState` with the data provided as kwargs.
 
         Args:
             batch_size: Number of elements in the first dimension of the
                 :class:`State` attributes.
-            **kwargs: Attributes that will be added to the returned :class:`States`.
+            **kwargs: Attributes that will be added to the returned :class:`SwarmState`.
 
         Returns:
-            A new :class:`States` created with the class ``params_dict`` updated
+            A new :class:`SwarmState` created with the class ``params_dict`` updated
             with the attributes passed as keyword arguments.
 
         """
@@ -72,7 +65,7 @@ class BaseCritic(StatesOwner):
     @classmethod
     def get_params_dict(cls) -> StateDict:
         """
-        Return an state_dict to be used for instantiating an States class.
+        Return an state_dict to be used for instantiating an SwarmState class.
 
         In order to define the tensors, a state_dict dictionary needs to be specified \
         using the following structure::
@@ -108,7 +101,7 @@ class BaseCritic(StatesOwner):
             walkers_states: :class:`StatesWalkers` corresponding to the :class:`Walkers` data.
 
         Returns:
-            States containing the the internal state of the :class:`BaseCritic`
+            SwarmState containing the the internal state of the :class:`BaseCritic`
 
         """
         raise NotImplementedError
@@ -127,8 +120,8 @@ class BaseCritic(StatesOwner):
 
         Args:
             batch_size: Number of elements in the first dimension of the model \
-                        States data.
-            model_states: States corresponding to model data. If provided the \
+                        SwarmState data.
+            model_states: SwarmState corresponding to model data. If provided the \
                           model will be reset to this state.
             env_states: :class:`StatesEnv` corresponding to the :class:`Environment` data.
             walkers_states: :class:`StatesWalkers` corresponding to the :class:`Walkers` data.
@@ -136,7 +129,7 @@ class BaseCritic(StatesOwner):
             kwargs: Additional keyword arguments not related to :class:`BaseCritic` data.
 
         Returns:
-            States containing the information of the current state of the \
+            SwarmState containing the information of the current state of the \
             :class:`BaseCritic` (after the reset).
 
         """
@@ -156,8 +149,8 @@ class BaseCritic(StatesOwner):
 
         Args:
             batch_size: Number of elements in the first dimension of the model \
-                        States data.
-            model_states: States corresponding to model data. If provided the \
+                        SwarmState data.
+            model_states: SwarmState corresponding to model data. If provided the \
                           model will be reset to this state.
             env_states: :class:`StatesEnv` corresponding to the :class:`Environment` data.
             walkers_states: :class:`StatesWalkers` corresponding to the :class:`Walkers` data.
@@ -165,7 +158,7 @@ class BaseCritic(StatesOwner):
             kwargs: Additional keyword arguments not related to :class:`BaseCritic` data.
 
         Returns:
-            States containing the information of the current state of the \
+            SwarmState containing the information of the current state of the \
             :class:`BaseCritic`.
 
         """
@@ -207,7 +200,7 @@ class BaseEnvironment(StatesOwner):
                        the environment.
 
         Returns:
-            States representing the next state of the environment and all \
+            SwarmState representing the next state of the environment and all \
             the needed information.
 
         """
@@ -234,7 +227,7 @@ class BaseEnvironment(StatesOwner):
         Args:
             batch_size: Number of elements in the first dimension of the
                 :class:`State` attributes.
-            **kwargs: Attributes that will be added to the returned :class:`States`.
+            **kwargs: Attributes that will be added to the returned :class:`SwarmState`.
 
         Returns:
             A new :class:`StatesEmv` created with the ``params_dict``, and
@@ -312,17 +305,17 @@ class BaseEnvironment(StatesOwner):
 
     def reset(self, batch_size: int = 1, env_states: StatesEnv = None, **kwargs) -> StatesEnv:
         """
-        Reset the environment and return an States class with batch_size copies \
+        Reset the environment and return an SwarmState class with batch_size copies \
         of the initial state.
 
         Args:
             batch_size: Number of walkers that the resulting state will have.
-            env_states: States class used to set the environment to an arbitrary
+            env_states: SwarmState class used to set the environment to an arbitrary
                 state.
             kwargs: Additional keyword arguments not related to environment data.
 
         Returns:
-            States class containing the information of the environment after the
+            SwarmState class containing the information of the environment after the
             reset.
 
         """
@@ -385,14 +378,14 @@ class BaseModel(StatesOwner):
 
         Args:
             batch_size: Number of elements in the first dimension of the model \
-                        States data.
-            model_states: States corresponding to model data. If provided the \
+                        SwarmState data.
+            model_states: SwarmState corresponding to model data. If provided the \
                           model will be reset to this state.
             args: Additional arguments not related to model data.
             kwargs: Additional keyword arguments not related to model data.
 
         Returns:
-            States containing the information of the current state of the \
+            SwarmState containing the information of the current state of the \
             model (after the reset).
 
         """
@@ -406,13 +399,13 @@ class BaseModel(StatesOwner):
         walkers_states: StatesWalkers = None,
     ) -> StatesModel:
         """
-        Calculate States containing the data needed to interact with the environment.
+        Calculate SwarmState containing the data needed to interact with the environment.
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the model data.
-            env_states: States corresponding to the environment data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the model data.
+            env_states: SwarmState corresponding to the environment data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
             Updated model_states with new model data.
@@ -492,17 +485,17 @@ class BaseWalkers(StatesOwner):
 
     @property
     def env_states(self) -> StatesEnv:
-        """Return the States class where all the environment information is stored."""
+        """Return the SwarmState class where all the environment information is stored."""
         raise NotImplementedError
 
     @property
     def model_states(self) -> StatesModel:
-        """Return the States class where all the model information is stored."""
+        """Return the SwarmState class where all the model information is stored."""
         raise NotImplementedError
 
     @property
     def states(self) -> StatesWalkers:
-        """Return the States class where all the model information is stored."""
+        """Return the SwarmState class where all the model information is stored."""
         raise NotImplementedError
 
     def increment_epoch(self):
@@ -524,12 +517,12 @@ class BaseWalkers(StatesOwner):
         **kwargs,
     ) -> None:
         """
-        Update the States variables that do not contain internal data and \
+        Update the SwarmState variables that do not contain internal data and \
         accumulate the rewards in the internal states if applicable.
 
         Args:
-            env_states: States containing the data associated with the Environment.
-            model_states: States containing data associated with the Environment.
+            env_states: SwarmState containing the data associated with the Environment.
+            model_states: SwarmState containing data associated with the Environment.
             **kwargs: Internal states will be updated via keyword arguments.
 
         """
@@ -686,9 +679,9 @@ class BaseSwarm:
         new search process.
 
         Args:
-            model_states: States that define the initial state of the environment.
-            env_states: States that define the initial state of the model.
-            walkers_states: States that define the internal states of the walkers.
+            model_states: SwarmState that define the initial state of the environment.
+            env_states: SwarmState that define the initial state of the model.
+            walkers_states: SwarmState that define the internal states of the walkers.
         """
         raise NotImplementedError
 
@@ -706,9 +699,9 @@ class BaseSwarm:
             root_walker: Walker representing the initial state of the search. \
                          The walkers will be reset to this walker, and it will \
                          be added to the root of the :class:`StateTree` if any.
-            model_states: States that define the initial state of the environment.
-            env_states: States that define the initial state of the model.
-            walkers_states: States that define the internal states of the walkers.
+            model_states: SwarmState that define the initial state of the environment.
+            env_states: SwarmState that define the initial state of the model.
+            walkers_states: SwarmState that define the internal states of the walkers.
 
         Returns:
             None.

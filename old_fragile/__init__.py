@@ -2,6 +2,8 @@
 
 import warnings
 
+import flogging as slogging  # noqa: E402
+
 
 warnings.filterwarnings(
     "ignore",

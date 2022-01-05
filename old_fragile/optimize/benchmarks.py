@@ -3,11 +3,11 @@ from typing import Callable
 
 import judo
 from judo import random_state, tensor
-from judo.data_structures.bounds import Bounds
 from numba import jit
 import numpy as np
 
-from fragile.core.env import Function
+from fragile.core.states import StatesEnv
+from fragile.optimize.env import Bounds, Function
 
 
 """
@@ -259,7 +259,7 @@ class LennardJones(OptimBenchmark):
         bounds = [(-15, 15) for _ in range(dims)]
         return Bounds.from_tuples(bounds)
 
-    def reset(self, **kwargs):
+    def reset(self, **kwargs) -> StatesEnv:
         states = super(LennardJones, self).reset()
         new_states = random_state.normal(0, scale=1.0, size=states.states.shape)
         states.update(observs=new_states, states=judo.copy(new_states))

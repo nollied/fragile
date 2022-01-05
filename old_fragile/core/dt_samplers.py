@@ -10,7 +10,7 @@ from fragile.core.typing import StateDict
 
 class BaseDtSampler(BaseCritic):
     """
-    :class:`Critic` that returns contains the attribute `dt` in its :class:`States`.
+    :class:`Critic` that returns contains the attribute `dt` in its :class:`SwarmState`.
 
     The `dt` value represents the number of time steps a given action will
     be applied. The returned values are floats so the critic can also be used
@@ -52,9 +52,9 @@ class BaseDtSampler(BaseCritic):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the model data.
-            env_states: States corresponding to the environment data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the model data.
+            env_states: SwarmState corresponding to the environment data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
             Array containing the sampled time step.
@@ -90,9 +90,9 @@ class ConstantDt(BaseDtSampler):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the model data.
-            env_states: States corresponding to the environment data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the model data.
+            env_states: SwarmState corresponding to the environment data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
             Array containing the sampled time step.
@@ -136,9 +136,9 @@ class UniformDt(BaseDtSampler):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the model data.
-            env_states: States corresponding to the environment data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the model data.
+            env_states: SwarmState corresponding to the environment data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
             Array containing the sampled time step for each value drawn for a \
@@ -198,9 +198,9 @@ class GaussianDt(BaseDtSampler):
 
         Args:
             batch_size: Number of new points to the sampled.
-            model_states: States corresponding to the model data.
-            env_states: States corresponding to the environment data.
-            walkers_states: States corresponding to the walkers data.
+            model_states: SwarmState corresponding to the model data.
+            env_states: SwarmState corresponding to the environment data.
+            walkers_states: SwarmState corresponding to the walkers data.
 
         Returns:
             Array containing the sampled time step values drawn from a gaussian \

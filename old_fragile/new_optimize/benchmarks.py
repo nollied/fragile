@@ -7,7 +7,7 @@ from judo.data_structures.bounds import Bounds
 from numba import jit
 import numpy as np
 
-from fragile.core.env import Function
+from fragile.new_optimize.env import Function
 
 
 """

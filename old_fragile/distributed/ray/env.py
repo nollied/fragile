@@ -55,11 +55,11 @@ class Environment:
         Step the wrapped :class:`fragile.Environment`.
 
         Args:
-            model_states: States representing the data to be used to act on the environment.
-            env_states: States representing the data to be set in the environment.
+            model_states: SwarmState representing the data to be used to act on the environment.
+            env_states: SwarmState representing the data to be set in the environment.
 
         Returns:
-            States representing the next state of the environment and all \
+            SwarmState representing the next state of the environment and all \
             the needed information.
 
         """
@@ -72,7 +72,7 @@ class Environment:
         Args:
             batch_size: Number of elements in the first dimension of the \
                        :class:`State` attributes.
-            **kwargs: Attributes that will be added to the returned :class:`States`.
+            **kwargs: Attributes that will be added to the returned :class:`SwarmState`.
 
         Returns:
             A new :class:`StatesEmv` created with the ``params_dict``, and \
@@ -125,17 +125,17 @@ class Environment:
 
     def reset(self, batch_size: int = 1, env_states: StatesEnv = None, **kwargs) -> StatesEnv:
         """
-        Reset the wrapped :class:`fragile.Environment` and return an States class \
+        Reset the wrapped :class:`fragile.Environment` and return an SwarmState class \
         with batch_size copies of the initial state.
 
         Args:
            batch_size: Number of walkers that the resulting state will have.
-           env_states: States class used to set the environment to an arbitrary \
+           env_states: SwarmState class used to set the environment to an arbitrary \
                        state.
            kwargs: Additional keyword arguments not related to environment data.
 
         Returns:
-           States class containing the information of the environment after the \
+           SwarmState class containing the information of the environment after the \
             reset.
 
         """
@@ -288,7 +288,7 @@ class RayEnv(CoreEnv):
     ) -> Tuple:
         """
         Reset the environment to the start of a new episode and returns a new \
-        States instance describing the state of the Environment.
+        SwarmState instance describing the state of the Environment.
 
         Args:
             batch_size: Number of walkers that the returned state will have.
@@ -298,7 +298,7 @@ class RayEnv(CoreEnv):
             **kwargs: Passed to the internal environment ``reset``.
 
         Returns:
-            States instance describing the state of the Environment. The first \
+            SwarmState instance describing the state of the Environment. The first \
             dimension of the data tensors (number of walkers) will be equal to \
             batch_size.
 
