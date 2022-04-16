@@ -1,12 +1,12 @@
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple
 
 import holoviews
 from holoviews import Store
 from holoviews.streams import Buffer, Pipe
 import judo
-from judo.typing import Scalar
 import numpy
 import pandas
+import pandas as pd
 from scipy.interpolate import griddata
 
 from fragile.core.api_classes import Callback
@@ -16,11 +16,15 @@ class StreamingPlot:
     """Represents a holoviews plot updated with streamed data."""
 
     name = ""
+    default_opts = {"framewise": True, "axiswise": True, "normalize": True, "shared_axes": False}
+    stream_class = Pipe
+    default_bokeh_opts = {}
+    default_mpl_opts = {}
 
     def __init__(
         self,
         plot: Callable,
-        stream=Pipe,
+        stream=None,
         data=None,
         bokeh_opts: dict = None,
         mpl_opts: dict = None,
@@ -39,13 +43,33 @@ class StreamingPlot:
         """
         self.data_stream = None
         self.plot = None
-        self.bokeh_opts = bokeh_opts if bokeh_opts is not None else {}
-        self.mpl_opts = mpl_opts if mpl_opts is not None else {}
+        bokeh_opts = bokeh_opts if bokeh_opts is not None else {}
+        mpl_opts = mpl_opts if mpl_opts is not None else {}
+        self.bokeh_opts = {**self.default_bokeh_opts, **bokeh_opts}
+        self.mpl_opts = {**self.default_mpl_opts, **mpl_opts}
+        self.common_kwargs = {**self.default_opts, **kwargs}
         self.init_stream(stream, data)
-        self.init_plot(plot, **kwargs)
+        self.init_plot(plot)
+
+    @property
+    def opts_kwargs(self):
+        if Store.current_backend == "bokeh":
+            backend_kwargs = self.bokeh_opts
+        elif Store.current_backend == "matplotlib":
+            backend_kwargs = self.mpl_opts
+        else:
+            backend_kwargs = {}
+        return {**self.common_kwargs, **backend_kwargs}
+
+    @opts_kwargs.setter
+    def opts_kwargs(self, kwargs):
+        self.common_kwargs = {**self.common_kwargs, **kwargs}
 
     def get_default_data(self):
         raise NotImplementedError()
+
+    def get_default_stream(self, data):
+        return self.stream_class(data=data)
 
     def preprocess_data(self, data):
         """Perform the necessary data wrangling for plotting the data."""
@@ -56,38 +80,28 @@ class StreamingPlot:
         data = self.preprocess_data(data)
         self.data_stream.send(data)
 
-    def init_plot(self, plot: Callable, **kwargs) -> None:
+    def init_plot(self, plot: Callable) -> None:
         """
         Initialize the holoviews plot to accept streaming data.
 
         Args:
             plot: Callable that returns a holoviews plot.
-            kwargs: Passed to ``opts``.
 
         """
-        self.plot = holoviews.DynamicMap(plot, streams=[self.data_stream])
-        self.opts(**kwargs)
 
-    def init_stream(self, stream, data=None):
+        def plot_func(data):
+            _plot = plot(data)
+            return self.opts(plot=_plot)
+
+        self.plot = holoviews.DynamicMap(plot_func, streams=[self.data_stream])
+        # self.opts()
+
+    def init_stream(self, stream=None, data=None):
         """Initialize the data stream that will be used to stream data to the plot."""
-        data = self.preprocess_data(data) if data is not None else self.get_default_data()
-        self.data_stream = stream(data=data)
-
-    @staticmethod
-    def update_default_opts(mpl_default, passed_mpl, bokeh_default, passed_bokeh):
-        """Update the backend specific parameter default values with external supplied defaults."""
-        if passed_bokeh is None:
-            bokeh_opts = bokeh_default
-        else:
-            bokeh_default.update(passed_bokeh)
-            bokeh_opts = bokeh_default
-
-        if passed_mpl is None:
-            mpl_opts = mpl_default
-        else:
-            mpl_default.update(passed_mpl)
-            mpl_opts = mpl_default
-        return mpl_opts, bokeh_opts
+        if stream is None:
+            data = self.preprocess_data(data) if data is not None else self.get_default_data()
+            stream = self.get_default_stream(data=data)
+        self.data_stream = stream
 
     def update_kwargs(self, **kwargs):
         """Update the supplied options kwargs with backend specific parameters."""
@@ -100,25 +114,36 @@ class StreamingPlot:
         opt_dict.update(kwargs)
         return opt_dict
 
-    def opts(self, **kwargs):
+    def opts(self, plot=None, **kwargs):
         """Update the plot parameters. Same as `holoviews` `opts`."""
         if self.plot is None:
             return
-        opt_dict = self.update_kwargs(**kwargs)
-        self.plot = self.plot.opts(**opt_dict)
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(**self.opts_kwargs)
+        else:
+            return plot.opts(**self.opts_kwargs)
 
 
 class Table(StreamingPlot):
     """``holoviews.Table`` with data streaming capabilities."""
 
+    default_opts = {
+        "framewise": True,
+        "axiswise": True,
+        "normalize": True,
+    }
+
     name = "table"
+    default_bokeh_opts = {
+        "height": 350,
+        "width": 350,
+    }
 
     def __init__(
         self,
         data=None,
-        stream=Pipe,
-        bokeh_opts: dict = None,
-        mpl_opts: dict = None,
+        plot=holoviews.Table,
         **kwargs,
     ):
         """
@@ -132,38 +157,24 @@ class Table(StreamingPlot):
             **kwargs: Passed to :class:`StreamingPlot`.
 
         """
-        default_bokeh_opts = {
-            "height": 350,
-            "width": 350,
-        }
-        default_mpl_opts = {}
-        mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts,
-            mpl_opts,
-            default_bokeh_opts,
-            bokeh_opts,
-        )
         super(Table, self).__init__(
-            stream=stream,
-            plot=holoviews.Table,
+            plot=plot,
             data=data,
-            mpl_opts=mpl_opts,
-            bokeh_opts=bokeh_opts,
             **kwargs,
         )
 
     def get_default_data(self):
         return pandas.DataFrame()
 
-    def opts(self, *args, **kwargs):
-        """
-        Update the plot parameters. Same as ``holoviews`` ``opts``.
-
-        The default values updates the plot axes independently when being \
-        displayed in a :class:`Holomap`.
-        """
-        plot_opts = self.update_kwargs(**kwargs)
-        self.plot = self.plot.opts(holoviews.opts.Table(*args, **plot_opts))
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.Table(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.Table(**self.opts_kwargs))
 
 
 class RGB(StreamingPlot):
@@ -171,30 +182,22 @@ class RGB(StreamingPlot):
 
     name = "rgb"
 
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data=None, plot=holoviews.RGB, **kwargs):
         """Initialize a :class:`RGB`."""
-        super(RGB, self).__init__(stream=Pipe, plot=holoviews.RGB, data=data, **kwargs)
+        super(RGB, self).__init__(plot=plot, data=data, **kwargs)
 
     def get_default_data(self):
         return []
 
-    def opts(
-        self,
-        xaxis=None,
-        yaxis=None,
-        *args,
-        **kwargs,
-    ):
-        """
-        Update the plot parameters. Same as ``holoviews`` ``opts``.
-
-        The default values updates the plot axes independently when being \
-        displayed in a :class:`Holomap`.
-        """
-        plot_opts = self.update_kwargs(**kwargs)
-        self.plot = self.plot.opts(
-            holoviews.opts.RGB(xaxis=xaxis, yaxis=yaxis, *args, **plot_opts),
-        )
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.RGB(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.RGB(**self.opts_kwargs))
 
 
 class Curve(StreamingPlot):
@@ -205,14 +208,20 @@ class Curve(StreamingPlot):
     """
 
     name = "curve"
+    default_bokeh_opts = {
+        "height": 350,
+        "width": 400,
+        "shared_axes": False,
+        "tools": ["hover"],
+    }
+    stream_class = Buffer
 
     def __init__(
         self,
+        data=None,
+        plot=holoviews.Curve,
         buffer_length: int = 10000,
         index: bool = False,
-        data=None,
-        bokeh_opts: dict = None,
-        mpl_opts: dict = None,
         data_names=("x", "y"),
         **kwargs,
     ):
@@ -230,68 +239,31 @@ class Curve(StreamingPlot):
                     "matplotlib" backend.
         """
 
-        def get_stream(data):
-            return Buffer(data, length=buffer_length, index=index)
+        self._buffer_length = buffer_length
+        self._index = index
 
-        default_bokeh_opts = {
-            "height": 350,
-            "width": 400,
-            "shared_axes": False,
-            "tools": ["hover"],
-        }
-        default_mpl_opts = {}
-        mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts,
-            mpl_opts,
-            default_bokeh_opts,
-            bokeh_opts,
-        )
         self._data_names = data.columns.values if data is not None else data_names
         super(Curve, self).__init__(
-            stream=get_stream,
-            plot=holoviews.Curve,
+            plot=plot,
             data=data,
-            mpl_opts=mpl_opts,
-            bokeh_opts=bokeh_opts,
             **kwargs,
         )
+
+    def get_default_stream(self, data):
+        return self.stream_class(data=data, length=self._buffer_length, index=self._index)
 
     def get_default_data(self):
         return pandas.DataFrame(columns=self._data_names)
 
-    def opts(
-        self,
-        title="curve",
-        xlabel: str = "x",
-        ylabel: str = "y",
-        framewise: bool = True,
-        axiswise: bool = True,
-        normalize: bool = True,
-        **kwargs,
-    ):
-        """
-        Update the plot parameters. Same as ``holoviews`` ``opts``.
-
-        The default values updates the plot axes independently when being \
-        displayed in a :class:`Holomap`.
-        """
-        kwargs = self.update_kwargs(**kwargs)
-        self.plot = self.plot.opts(
-            holoviews.opts.Curve(
-                title=title,
-                xlabel=xlabel,
-                ylabel=ylabel,
-                framewise=framewise,
-                axiswise=axiswise,
-                normalize=normalize,
-                **kwargs,
-            ),
-            holoviews.opts.NdOverlay(
-                normalize=normalize,
-                framewise=framewise,
-                axiswise=axiswise,
-            ),
-        )
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.Curve(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.Curve(**self.opts_kwargs))
 
 
 class Histogram(StreamingPlot):
@@ -302,13 +274,20 @@ class Histogram(StreamingPlot):
     """
 
     name = "histogram"
+    default_opts = {
+        "ylabel": "count",
+        "framewise": True,
+        "axiswise": True,
+        "normalize": True,
+        "shared_axes": False,
+    }
+    default_bokeh_opts = {"tools": ["hover"]}
 
     def __init__(
         self,
-        n_bins: int = 20,
         data=None,
-        bokeh_opts: dict = None,
-        mpl_opts: dict = None,
+        plot=None,
+        n_bins: int = 20,
         **kwargs,
     ):
         """
@@ -324,20 +303,9 @@ class Histogram(StreamingPlot):
         """
         self.n_bins = n_bins
         self.xlim = (None, None)
-        default_bokeh_opts = {"shared_axes": False, "tools": ["hover"]}
-        default_mpl_opts = {}
-        mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts,
-            mpl_opts,
-            default_bokeh_opts,
-            bokeh_opts,
-        )
         super(Histogram, self).__init__(
-            stream=Pipe,
-            plot=self.plot_histogram,
+            plot=self.plot_histogram if plot is None else plot,
             data=data,
-            mpl_opts=mpl_opts,
-            bokeh_opts=bokeh_opts,
             **kwargs,
         )
 
@@ -358,72 +326,25 @@ class Histogram(StreamingPlot):
         plot_data, xlim = data
         return holoviews.Histogram(plot_data).redim(x=holoviews.Dimension("x", range=xlim))
 
-    def opts(
-        self,
-        title="",
-        xlabel: str = "x",
-        ylabel: str = "count",
-        framewise: bool = True,
-        axiswise: bool = True,
-        normalize: bool = True,
-        *args,
-        **kwargs,
-    ):
-        """
-        Update the plot parameters. Same as ``holoviews`` ``opts``.
-
-        The default values updates the plot axes independently when being \
-        displayed in a :class:`Holomap`.
-        """
-        kwargs = self.update_kwargs(**kwargs)
-        self.plot = self.plot.opts(
-            holoviews.opts.Histogram(
-                title=title,
-                xlabel=xlabel,
-                ylabel=ylabel,
-                framewise=framewise,
-                axiswise=axiswise,
-                normalize=normalize,
-                *args,
-                **kwargs,
-            ),
-            holoviews.opts.NdOverlay(
-                normalize=normalize,
-                framewise=framewise,
-                axiswise=axiswise,
-            ),
-        )
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.Histogram(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.Histogram(**self.opts_kwargs))
 
     def preprocess_data(self, data):
-        return self.get_plot_data(data)
-
-    def get_plot_data(
-        self,
-        data: numpy.ndarray,
-    ) -> Tuple[
-        Tuple[numpy.ndarray, numpy.ndarray],
-        Tuple[Union[Scalar, None], Union[Scalar, None]],
-    ]:
-        """
-        Calculate the histogram of the streamed data.
-
-        Args:
-            data: Values used to calculate the histogram.
-
-        Returns:
-            Tuple containing (values, bins), xlim. xlim is a tuple \
-                  containing two typing_.Scalars that represent the limits of the x \
-                  axis of the histogram.
-
-        """
-        if data is None:
-            data = numpy.arange(10)
         data = judo.to_numpy(data)
+        # print(data)
         data[numpy.isnan(data)] = 0.0
         return numpy.histogram(data, self.n_bins), self.xlim
 
     def get_default_data(self):
-        return self.get_plot_data(None)
+        data = numpy.arange(10)
+        return self.preprocess_data(data)
 
 
 class Bivariate(StreamingPlot):
@@ -434,8 +355,13 @@ class Bivariate(StreamingPlot):
     """
 
     name = "bivariate"
+    default_bokeh_opts = {
+        "height": 350,
+        "width": 400,
+        "tools": ["hover"],
+    }
 
-    def __init__(self, data=None, bokeh_opts=None, mpl_opts=None, **kwargs):
+    def __init__(self, data=None, plot=holoviews.Bivariate, **kwargs):
         """
         Initialize a :class:`Bivariate`.
 
@@ -448,32 +374,23 @@ class Bivariate(StreamingPlot):
             *args: Passed to ``holoviews.Bivariate``.
             **kwargs: Passed to ``holoviews.Bivariate``.
         """
-
-        def bivariate(data):
-            return holoviews.Bivariate(data, **kwargs)
-
-        default_bokeh_opts = {
-            "height": 350,
-            "width": 400,
-            "tools": ["hover"],
-            "shared_axes": False,
-        }
-        default_mpl_opts = {}
-        mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts,
-            mpl_opts,
-            default_bokeh_opts,
-            bokeh_opts,
-        )
         super(Bivariate, self).__init__(
-            stream=Pipe,
-            plot=bivariate,
+            plot=plot,
             data=data,
-            bokeh_opts=bokeh_opts,
-            mpl_opts=mpl_opts,
+            **kwargs,
         )
 
-    def opts(
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.Bivariate(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.Bivariate(**self.opts_kwargs))
+
+    def __opts(
         self,
         title="",
         xlabel: str = "x",
@@ -529,6 +446,224 @@ class Bivariate(StreamingPlot):
         return []
 
 
+class QuadMesh(StreamingPlot):
+    """
+    Create a ``holoviews.Histogram`` plot that plots steaming data.
+
+    The streaming process is handled using a :class:`Pipe`.
+    """
+
+    name = "quadmesh"
+    default_bokeh_opts = {
+        "tools": ["hover"],
+        "bgcolor": "lightgray",
+        "colorbar": True,
+        "height": 350,
+        "line_width": 1.0,
+        "width": 400,
+        "shared_axes": False,
+        "cmap": "viridis",
+    }
+
+    # default_mpl_opts = {"linewidth": 1.0}
+
+    def __init__(
+        self,
+        data=None,
+        plot=None,
+        n_points: int = 20,
+        **kwargs,
+    ):
+        """
+        Initialize a :class:`Histogram`.
+
+        Args:
+            n_bins: Number of bins of the histogram that will be plotted.
+            data: Used to initialize the plot.
+        """
+        self.n_points = n_points
+        super(QuadMesh, self).__init__(
+            plot=self.plot_quadmesh if plot is None else plot,
+            data=data,
+            **kwargs,
+        )
+
+    def send(self, data, xx=None, yy=None, zz=None) -> None:
+        """Stream data to the plot and keep track of how many times the data has been streamed."""
+        data = self.preprocess_data(data, xx=xx, yy=yy, zz=zz)
+        self.data_stream.send(data)
+
+    def plot_quadmesh(self, data):
+        """
+        Plot the data as an energy landscape.
+
+        Args:
+            data: (x, y, xx, yy, z, xlim, ylim). x, y, z represent the \
+                  coordinates of the points that will be interpolated. xx, yy \
+                  represent the meshgrid used to interpolate the points. xlim, \
+                  ylim are tuples containing the limits of the x and y axes.
+
+        Returns:
+            Plot representing the interpolated energy landscape of the target points.
+
+        """
+        xx, yy, zz, xlim, ylim, zlim = data
+        plot = holoviews.QuadMesh((xx, yy, zz))
+        return plot
+        return plot.redim(
+            x=holoviews.Dimension("x", range=xlim),
+            y=holoviews.Dimension("y", range=ylim),
+            z=holoviews.Dimension("z", range=zlim),
+        )
+
+    def preprocess_data(
+        self,
+        data: Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray],
+        xx=None,
+        yy=None,
+        zz=None,
+    ):
+        """Create the meshgrid needed to interpolate the target data points."""
+        x, y, z = (data[:, 0], data[:, 1], data[:, 2]) if isinstance(data, numpy.ndarray) else data
+        x, y, z = judo.to_numpy(x), judo.to_numpy(y), judo.to_numpy(z)
+        # target grid to interpolate to
+        if zz is None:
+            xi = numpy.linspace(x.min(), x.max(), self.n_points)
+            yi = numpy.linspace(y.min(), y.max(), self.n_points)
+            xx, yy = numpy.meshgrid(xi, yi)
+            zz = griddata((x, y), z, (xx, yy), method="linear")
+        xlim, ylim, zlim = (x.min(), x.max()), (y.min(), y.max()), (z.min(), z.max())
+        return xx, yy, zz, xlim, ylim, zlim
+
+    def get_default_data(self):
+        X = numpy.random.standard_normal((10, 2))
+        z = numpy.random.standard_normal(10)
+        data = X[:, 0], X[:, 1], z
+        return self.preprocess_data(data)
+
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.QuadMesh(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.QuadMesh(**self.opts_kwargs))
+
+
+class QuadMeshContours(QuadMesh):
+    default_opts = {"shared_axes": True}
+    default_bokeh_opts = {
+        "tools": ["hover"],
+        "bgcolor": "lightgray",
+        "alpha": 0.9,
+        "show_legend": False,
+        "height": 350,
+        "width": 400,
+        "line_color": "black",
+        # "shared_axes": False,
+        "colorbar": True,
+        "cmap": "viridis",  # ["black"],
+    }
+
+    def __init__(self, data=None, levels: int = 16, **kwargs):
+        self.levels = levels
+        super(QuadMeshContours, self).__init__(data=data, **kwargs)
+
+    def plot_quadmesh(self, data):
+        """
+        Plot the data as an energy landscape.
+
+        Args:
+            data: (x, y, xx, yy, z, xlim, ylim). x, y, z represent the \
+                  coordinates of the points that will be interpolated. xx, yy \
+                  represent the meshgrid used to interpolate the points. xlim, \
+                  ylim are tuples containing the limits of the x and y axes.
+
+        Returns:
+            Plot representing the interpolated energy landscape of the target points.
+
+        """
+        xx, yy, zz, xlim, ylim, zlim = data
+        mesh = holoviews.QuadMesh((xx, yy, zz))
+        plot = holoviews.operation.contours(mesh, levels=self.levels)
+        return (mesh * plot).redim(
+            x=holoviews.Dimension("x", range=xlim),
+            y=holoviews.Dimension("y", range=ylim),
+            z=holoviews.Dimension("z", range=zlim),
+        )
+
+    def send(self, data, xx=None, yy=None, zz=None) -> None:
+        x, y, z = data
+        self.common_kwargs["zlim"] = (z.min(), z.max())
+        super(QuadMeshContours, self).send(data=data, xx=xx, yy=yy, zz=zz)
+
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(
+                holoviews.opts.Contours(**{**self.opts_kwargs, **{"cmap": ["black"]}}),
+                holoviews.opts.QuadMesh(**self.opts_kwargs),
+            )
+        else:
+            return plot.opts(
+                holoviews.opts.Contours(**{**self.opts_kwargs, **{"cmap": ["black"]}}),
+                holoviews.opts.QuadMesh(**self.opts_kwargs),
+            )
+
+
+class Scatter(StreamingPlot):
+    default_bokeh_opts = {
+        "tools": ["hover"],
+        "bgcolor": "lightgray",
+        "line_color": "black",
+        # "fill_color": "red",
+        "height": 350,
+        "size": 3.5,
+        "width": 400,
+        "shared_axes": False,
+    }
+    default_mpl_opts = {"s": 1}
+
+    def __init__(
+        self,
+        data=None,
+        plot=holoviews.Scatter,
+        n_points: int = 20,
+        **kwargs,
+    ):
+        """
+        Initialize a :class:`Histogram`.
+
+        Args:
+            n_bins: Number of bins of the histogram that will be plotted.
+            data: Used to initialize the plot.
+        """
+        self.n_points = n_points
+        super(Scatter, self).__init__(
+            plot=plot,
+            data=data,
+            **kwargs,
+        )
+
+    def get_default_data(self):
+        return pd.DataFrame({"x": [], "y": []})
+
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.Scatter(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.Scatter(**self.opts_kwargs))
+
+
 class Landscape2D(StreamingPlot):
     """
     Plots the interpolated landscaped of values of a set of points.
@@ -539,15 +674,17 @@ class Landscape2D(StreamingPlot):
     """
 
     name = "landscape"
+    default_bokeh_opts = {
+        "height": 350,
+        "width": 400,
+        "tools": ["hover"],
+        "shared_axes": False,
+    }
 
     def __init__(
         self,
-        n_points: int = 50,
         data=None,
-        invert_cmap: bool = False,
-        mpl_opts: dict = None,
-        bokeh_opts: dict = None,
-        plot_scatter: bool = True,
+        contours: bool = True,
         **kwargs,
     ):
         """
@@ -565,33 +702,33 @@ class Landscape2D(StreamingPlot):
                          colors to the lowest values.
 
         """
-        self.n_points = n_points
-        self._plot_scatter = plot_scatter
-        self.invert_cmap = invert_cmap
-        self.xlim = (None, None)
-        self.ylim = (None, None)
-        default_bokeh_opts = {
-            "height": 350,
-            "width": 400,
-            "tools": ["hover"],
-            "shared_axes": False,
-        }
-        default_mpl_opts = {}
-
-        mpl_opts, bokeh_opts = self.update_default_opts(
-            default_mpl_opts,
-            mpl_opts,
-            default_bokeh_opts,
-            bokeh_opts,
+        self.quadmesh_ps = QuadMesh(data=data, **kwargs)
+        self.contours_ps = (
+            None
+            if not contours
+            else QuadMeshContours(data=data, stream=self.quadmesh_ps.data_stream, **kwargs)
         )
+        self.scatter_ps = Scatter(data=data)
         super(Landscape2D, self).__init__(
-            stream=Pipe,
+            stream=self.quadmesh_ps.data_stream,
             plot=self.plot_landscape,
             data=data,
-            mpl_opts=mpl_opts,
-            bokeh_opts=bokeh_opts,
             **kwargs,
         )
+
+    def init_plot(self, plot: Callable) -> None:
+        """
+        Initialize the holoviews plot to accept streaming data.
+
+        Args:
+            plot: Callable that returns a holoviews plot.
+
+        """
+        # self.plot = self.quadmesh_ps.plot
+        if True:  # self.contours_ps is not None:
+            self.plot = self.contours_ps.plot
+
+        # self.plot = self.plot * self.scatter_ps.plot
 
     def plot_landscape(self, data):
         """
@@ -607,40 +744,46 @@ class Landscape2D(StreamingPlot):
             Plot representing the interpolated energy landscape of the target points.
 
         """
-        x, y, xx, yy, z, xlim, ylim = data
-        zz = griddata((x, y), z, (xx, yy), method="linear")
-        mesh = holoviews.QuadMesh((xx, yy, zz))
-        contour = holoviews.operation.contours(mesh, levels=16)
-
-        contour_mesh = mesh * contour
-        if self._plot_scatter:
-            scatter = holoviews.Scatter((x, y))
-            contour_mesh = contour_mesh * scatter
-        return contour_mesh.redim(
-            x=holoviews.Dimension("x", range=xlim),
-            y=holoviews.Dimension("y", range=ylim),
+        plot = self.quadmesh_ps.plot_quadmesh(data)
+        if self.contours_ps:
+            plot = plot * self.contours_ps.plot_quadmesh(data)
+        return plot.opts(
+            holoviews.opts.QuadMesh(**self.quadmesh_ps.opts_kwargs),
+            holoviews.opts.Contours(**self.contours_ps.opts_kwargs),
         )
 
     def preprocess_data(self, data):
-        return self.get_plot_data(data)
+        return self.quadmesh_ps.preprocess_data(data)
 
-    def get_plot_data(self, data: Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]):
-        """Create the meshgrid needed to interpolate the target data points."""
-        x, y, z = (data[:, 0], data[:, 1], data[:, 2]) if isinstance(data, numpy.ndarray) else data
-        x, y, z = judo.to_numpy(x), judo.to_numpy(y), judo.to_numpy(z)
-        # target grid to interpolate to
-        xi = numpy.linspace(x.min(), x.max(), self.n_points)
-        yi = numpy.linspace(y.min(), y.max(), self.n_points)
-        xx, yy = numpy.meshgrid(xi, yi)
-        return x, y, xx, yy, z, self.xlim, self.ylim
+    def send(self, data) -> None:
+        """Stream data to the plot and keep track of how many times the data has been streamed."""
+        self.quadmesh_ps.send(data)
+        df = pandas.DataFrame({"x": data[0], "y": data[1]})
+        self.scatter_ps.send(df)
+        # self.plot = self.plot.opts(framewise=True)
+        xlim, ylim = (data[0].min(), data[0].max()), (data[1].min(), data[1].max())
+        zlim = (data[2].min(), data[2].max())
+        self.quadmesh_ps.plot = self.quadmesh_ps.plot.redim(
+            x=holoviews.Dimension("x", range=xlim),
+            y=holoviews.Dimension("y", range=ylim),
+            z=holoviews.Dimension("z", range=zlim),
+        )
+        self.contours_ps.plot = self.contours_ps.plot.redim(
+            x=holoviews.Dimension("x", range=xlim),
+            y=holoviews.Dimension("y", range=ylim),
+            z=holoviews.Dimension("z", range=zlim),
+        )
+        # self.plot = self.plot
 
     def get_default_data(self):
-        X = numpy.random.standard_normal((10, 2))
-        z = numpy.random.standard_normal(10)
-        data = X[:, 0], X[:, 1], z
-        return self.get_plot_data(data)
+        return self.quadmesh_ps.get_default_data()
 
-    def opts(
+    def opts(self, **kwargs):
+        self.quadmesh_ps.opts(**kwargs)
+        if self.contours_ps is not None:
+            self.contours_ps.opts(**kwargs)
+
+    def __opts(
         self,
         title="Distribution landscape",
         xlabel: str = "x",
@@ -649,7 +792,6 @@ class Landscape2D(StreamingPlot):
         axiswise: bool = True,
         normalize: bool = True,
         cmap: str = "default",
-        *args,
         **kwargs,
     ):
         """
@@ -687,7 +829,6 @@ class Landscape2D(StreamingPlot):
                 framewise=framewise,
                 axiswise=axiswise,
                 normalize=normalize,
-                *args,
                 **kwargs,
             ),
             holoviews.opts.Contours(
@@ -700,7 +841,6 @@ class Landscape2D(StreamingPlot):
                 framewise=framewise,
                 axiswise=axiswise,
                 normalize=normalize,
-                *args,
                 **contours_kwargs,
             ),
             holoviews.opts.Scatter(
@@ -710,7 +850,6 @@ class Landscape2D(StreamingPlot):
                 framewise=framewise,
                 axiswise=axiswise,
                 normalize=normalize,
-                *args,
                 **scatter_kwargs,
             ),
             holoviews.opts.NdOverlay(
@@ -728,7 +867,7 @@ class PlotCallback(Callback):
 
     def after_evolve(self):
         super(PlotCallback, self).before_walkers()
-        if self.swarm.epoch % self.report_interval == 0:
+        if self.swarm.epoch % self.report_interval == 0 or self.swarm.epoch == 0:
             self.send()
 
     def send(self):

@@ -17,13 +17,13 @@ https://en.wikipedia.org/wiki/Test_functions_for_optimization
 
 
 def sphere(x: np.ndarray) -> np.ndarray:
-    return judo.sum(x ** 2, 1).flatten()
+    return judo.sum(x**2, 1).flatten()
 
 
 def rastrigin(x: np.ndarray) -> np.ndarray:
     dims = x.shape[1]
     A = 10
-    result = A * dims + judo.sum(x ** 2 - A * judo.cos(2 * math.pi * x), 1)
+    result = A * dims + judo.sum(x**2 - A * judo.cos(2 * math.pi * x), 1)
     return result.flatten()
 
 
@@ -36,7 +36,7 @@ def eggholder(x: np.ndarray) -> np.ndarray:
 
 
 def styblinski_tang(x) -> np.ndarray:
-    return judo.sum(x ** 4 - 16 * x ** 2 + 5 * x, 1) / 2.0
+    return judo.sum(x**4 - 16 * x**2 + 5 * x, 1) / 2.0
 
 
 def rosenbrock(x) -> np.ndarray:
@@ -141,6 +141,7 @@ class EggHolder(OptimBenchmark):
     @staticmethod
     def get_bounds(dims=None):
         bounds = [(-512.0, 512.0), (-512.0, 512.0)]
+        # bounds = [(1, 512.0), (1, 512.0)]
         return Bounds.from_tuples(bounds)
 
     @property
@@ -259,7 +260,7 @@ class LennardJones(OptimBenchmark):
         bounds = [(-15, 15) for _ in range(dims)]
         return Bounds.from_tuples(bounds)
 
-    def reset(self, **kwargs):
+    def __reset(self, **kwargs):
         states = super(LennardJones, self).reset()
         new_states = random_state.normal(0, scale=1.0, size=states.states.shape)
         states.update(observs=new_states, states=judo.copy(new_states))

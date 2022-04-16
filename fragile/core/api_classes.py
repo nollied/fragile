@@ -68,7 +68,7 @@ class SwarmComponent:
 
         return {k: get_one_input(k, v) for k, v in self.inputs.items()}
 
-    def update(self, other: Union["SwarmState", Dict[str, Tensor]] = None, **kwargs):
+    def update(self, other: Union["SwarmState", Dict[str, Tensor]] = None, **kwargs) -> None:
         """
         Modify the data stored in the SwarmState instance.
 
@@ -79,6 +79,8 @@ class SwarmComponent:
             **kwargs: It is possible to specify the update as name value attributes,
                 where name is the name of the attribute to be updated, and value
                 is the new value for the attribute.
+        Returns:
+            None
         """
         return self.swarm.state.update(other=other, **kwargs)
 
@@ -164,6 +166,7 @@ class EnvironmentAPI(SwarmComponent):
         using the input data to make the corresponding state transition.
 
         Args:
+            inplace: If False return the new data. If True, update the state of the Swarm.
             **kwargs: Keyword arguments passed if the returned value from the
                 ``states_to_data`` function of the class was a dictionary.
 
@@ -355,11 +358,11 @@ class SwarmAPI:
         walkers: WalkersAPI,
         callbacks: Optional[Iterable[Callback]] = None,
         minimize: bool = False,
-        max_epochs: int = int(1e100),
+        max_epochs: int = 1e100,
     ):
         """Initialize a :class:`SwarmAPI`."""
         self.minimize = minimize
-        self.max_epochs = max_epochs
+        self.max_epochs = int(max_epochs)
         self._n_walkers = n_walkers
         self._epoch = 0
         self._env = env
@@ -480,16 +483,19 @@ class SwarmAPI:
             callback.reset(root_walker=root_walker)
         self._epoch = 0
 
-    def run(self, root_walker: Optional[StateData] = None, state: Optional[StateData] = None):
+    def run(
+        self,
+        root_walker: Optional[StateData] = None,
+        state: Optional[StateData] = None,
+    ) -> None:
         """
         Run a new search process until the stop condition is met.
 
         Args:
-            Args:
             root_walker: Walker representing the initial state of the search.
                 The walkers will be reset to this walker, and it will
                 be added to the root of the :class:`StateTree` if any.
-            states: SwarmState that define the initial state of the Swarm.
+            state: StateData dictionary that define the initial state of the Swarm.
 
         Returns:
             None.

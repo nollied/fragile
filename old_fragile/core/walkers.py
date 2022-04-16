@@ -214,7 +214,7 @@ class SimpleWalkers(BaseWalkers):
         """
         processed_rewards = relativize(self.states.cum_rewards)
         virt_rw = (
-            processed_rewards ** self.reward_scale * self.states.distances ** self.distance_scale
+            processed_rewards**self.reward_scale * self.states.distances**self.distance_scale
         )
         self.update_states(virtual_rewards=virt_rw, processed_rewards=processed_rewards)
 
@@ -526,13 +526,13 @@ class Walkers(SimpleWalkers):
         """Apply the virtual reward formula to account for all the different goal scores."""
         rewards = -1 * self.states.cum_rewards if self.minimize else self.states.cum_rewards
         processed_rewards = relativize(rewards)
-        score_reward = processed_rewards ** self.reward_scale
-        score_dist = self.states.distances ** self.distance_scale
+        score_reward = processed_rewards**self.reward_scale
+        score_dist = self.states.distances**self.distance_scale
         virt_rw = score_reward * score_dist
         dist_prob = score_dist / score_dist.sum()
         reward_prob = score_reward / score_reward.sum()
-        total_entropy = judo.prod(2 - dist_prob ** reward_prob)
-        self._min_entropy = judo.prod(2 - reward_prob ** reward_prob)
+        total_entropy = judo.prod(2 - dist_prob**reward_prob)
+        self._min_entropy = judo.prod(2 - reward_prob**reward_prob)
         self.efficiency = self._min_entropy / total_entropy
         self.update_states(virtual_rewards=virt_rw, processed_rewards=processed_rewards)
         if self.critic is not None:

@@ -2,6 +2,7 @@ from typing import Optional, Union
 
 import judo
 from judo import Backend, Bounds, dtype, random_state, tensor
+import numpy.linalg
 
 from fragile.core.api_classes import PolicyAPI, SwarmAPI
 from fragile.core.typing import StateData, Tensor
@@ -195,3 +196,27 @@ class Gaussian(ContinuousPolicy):
             size=shape,
         )
         return new_points
+
+
+class GaussianModulus(ContinuousPolicy):
+    def __init__(self, loc: float = 0.0, scale: float = 1.0, **kwargs):
+        super(GaussianModulus, self).__init__(**kwargs)
+        self.loc = loc
+        self.scale = scale
+
+    def select_actions(self, **kwargs) -> Tensor:
+        shape = tuple([self.swarm.n_walkers]) + self.bounds.shape
+        new_points = random_state.uniform(
+            low=-1.0,
+            high=1.0,
+            size=shape,
+        )
+        new_points = new_points / numpy.linalg.norm(new_points, axis=1).reshape(-1, 1)
+
+        modulus = random_state.normal(
+            loc=self.loc,
+            scale=self.scale,
+            size=(self.swarm.n_walkers, 1),
+        )
+
+        return new_points * modulus

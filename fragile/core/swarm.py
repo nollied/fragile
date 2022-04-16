@@ -42,7 +42,7 @@ class Swarm(SwarmAPI):
             for k, v in self.state.items()
             if k in self.state.vector_names and k not in skip_print
         }
-        return pandas.DataFrame(data).describe().T.drop(columns=["count"])
+        return pandas.DataFrame(data).astype(float).describe().T.drop(columns=["count"])
 
     def _setup_inputs(self):
         # TODO: Make it so it does not override params
@@ -60,6 +60,9 @@ class Swarm(SwarmAPI):
         clone_policy = [k for k, v in self.policy.inputs.items() if v.get("clone")]
         clone_walkers = [k for k, v in self.walkers.inputs.items() if v.get("clone")]
         clone_names = clone_env + clone_policy + clone_walkers
+        for callback in self.callbacks.values():
+            clone_callback = [k for k, v in callback.inputs.items() if v.get("clone")]
+            clone_names = clone_names + clone_callback
         self._clone_names = set(list(self.clone_names) + clone_names)
 
     def _setup_components(self):
@@ -123,7 +126,6 @@ class FunctionMapper(Swarm):
         Args:
             function: Callable representing an arbitrary function to be optimized.
             bounds: Represents the domain of the function to be optimized.
-            *args: Passed to :class:`FunctionMapper` __init__.
             **kwargs: Passed to :class:`FunctionMapper` __init__.
 
         Returns:
@@ -149,12 +151,7 @@ class FunctionMapper(Swarm):
             root_walker: Walker representing the initial state of the search. \
                          The walkers will be reset to this walker, and it will \
                          be added to the root of the :class:`StateTree` if any.
-            model_states: :class:`StatesModel` that define the initial state of \
-                          the :class:`Model`.
-            env_states: :class:`StatesEnv` that define the initial state of \
-                        the :class:`Function`.
-            walkers_states: :class:`StatesWalkers` that define the internal \
-                            states of the :class:`Walkers`.
+            state: StateData dictionary that define the initial state of the Swarm.
 
         """
         super(FunctionMapper, self).reset(root_walker=root_walker, state=state)

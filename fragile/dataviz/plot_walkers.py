@@ -46,7 +46,9 @@ class PlotWalkers(PlotCallback):
         if self._plot_virtual_rewards:
             self.virtual_reward_sp.send(self.get("virtual_rewards"))
         if self._plot_norm_scores:
-            self.norm_scores_sp.send(relativize(self.get("scores")))
+            scores = self.get("scores")
+            scores = -1.0 * scores if self.swarm.minimize else scores
+            self.norm_scores_sp.send(relativize(scores))
         if self._plot_norm_diversities:
             self.norm_diversities_sp.send(relativize(self.get("diversities")))
 

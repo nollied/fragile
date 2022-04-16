@@ -66,7 +66,7 @@ extended_default_ignore=[]
 [tool.flakehell.plugins]
 "flake8*" = ["+*", "-D*"]
 pylint = ["+*", "-D*"]
-pyflakes = ["+*", "-D*"]
+pyflakes = ["+*", "-F821","-D*"]
 pycodestyle = ["+*" , "-D100", "-D104", "-D301", "-W503", "-W504", "-D*"]
 
 [tool.flakehell.exceptions."**/__init__.py"]

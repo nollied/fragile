@@ -56,7 +56,7 @@ def rastrigin_fmc():
     return fmc
 
 
-swarms = [(create_rastrigin(), 1), (rastrigin_fmc(), 15), (create_minimzer_rastrigin(), 1)]
+swarms = [(create_rastrigin(), 1), (rastrigin_fmc(), 18), (create_minimzer_rastrigin(), 1)]
 
 
 @pytest.mark.parametrize("swarm_and_target", swarms)

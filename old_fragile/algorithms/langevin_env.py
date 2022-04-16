@@ -38,7 +38,7 @@ class Langevin(Function):
                     input and returns an array of booleans. Each ``True`` value \
                     indicates that the corresponding point is **outside**  the \
                     ``custom_domain_check``.
-            brownian: Ignore the force term when updating the velocities.
+            brownian: Ignore the lj_force term when updating the velocities.
             dt: Step size of the integration.
             temperature: Temperature parameter of the Langevin dynamics.
             derivative: Derivative of function.

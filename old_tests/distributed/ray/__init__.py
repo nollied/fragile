@@ -1,4 +1,4 @@
-from tests import IN_CI
+from old_tests import IN_CI
 
 
 try:
@@ -19,10 +19,9 @@ try:
                 ignore_reinit_error=True,
             )
 
-
 except ImportError:
 
-    from fragile.distributed.ray import ray
+    from old_fragile.distributed.ray import ray
 
     def init_ray():
         pass

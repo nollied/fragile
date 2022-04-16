@@ -6,9 +6,9 @@ from fragile.algorithms.fmc import FMCSwarm
 from fragile.callbacks.root_walker import BestWalker
 from fragile.callbacks.time_steps import GaussianDt
 from fragile.callbacks.tree import HistoryTree
-from fragile.core.api_classes import Swarm
 from fragile.core.env import PlangymEnv
 from fragile.core.policy import Discrete, Gaussian, RandomPlangym
+from fragile.core.swarm import Swarm
 from fragile.core.walkers import Walkers
 
 
@@ -17,7 +17,7 @@ def create_pacman():
     walkers = Walkers(score_scale=2, accumulate_reward=True)
     env = PlangymEnv(plangym_env)
     callbacks = [BestWalker(), GaussianDt(low=2, high=15, loc=5, scale=5)]
-    n_walkers = 32
+    n_walkers = 40
     swarm = Swarm(
         policy=Discrete(),
         walkers=walkers,

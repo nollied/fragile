@@ -676,7 +676,7 @@ class GridLandscape(SwarmLandscape):
     def get_z_coords(self, swarm: Swarm, X: numpy.ndarray = None) -> numpy.ndarray:
         """Extract the memory values of the :class:`Critic`'s grid."""
         if swarm is None:
-            return numpy.ones(self.n_points ** self.n_points)
+            return numpy.ones(self.n_points**self.n_points)
         if swarm.critic.bounds is None:
             swarm.critic.bounds = Bounds.from_array(X, scale=1.1)
         # target grid to interpolate to
@@ -729,7 +729,7 @@ class KDELandscape(SwarmLandscape):
     def get_z_coords(self, swarm: Swarm, X: numpy.ndarray = None):
         """Get the values assigned by the :class:`Critic` to the regions of the state space."""
         if swarm is None:
-            return numpy.ones(self.n_points ** self.n_points)
+            return numpy.ones(self.n_points**self.n_points)
         if swarm.critic.bounds is None:
             swarm.critic.bounds = Bounds.from_array(X, scale=1.1)
         # target grid to interpolate to

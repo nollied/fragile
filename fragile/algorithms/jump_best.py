@@ -1,59 +1,25 @@
 from typing import Iterable, Optional, Tuple, Union
 
-import einops
-import judo
-import numpy
-import numpy as np
+import networkx as nx
 
 from fragile.callbacks.data_tracking import StoreInitAction
+from fragile.callbacks.tree import HistoryTree
 from fragile.core.api_classes import Callback, EnvironmentAPI, PolicyAPI, WalkersAPI
 from fragile.core.swarm import Swarm
 from fragile.core.typing import InputDict, StateData, StateDict, Tensor
 
 
-class BoundaryInitAction(Callback):
-    name = "boundary_action"
-    default_outputs = ("actions",)
-
-    def __init__(self, only_first_epoch: bool = True, **kwargs):
-        self.only_first_epoch = only_first_epoch
-        super(BoundaryInitAction, self).__init__(**kwargs)
-
-    def after_policy(self):
-        assert hasattr(self.swarm.policy, "bounds")
-        if self.only_first_epoch and self.swarm.epoch > 0:
-            return
-        low_val = einops.repeat(self.swarm.policy.bounds.low, "n -> b n", b=self.swarm.n_walkers)
-        high_val = einops.repeat(self.swarm.policy.bounds.high, "n -> b n", b=self.swarm.n_walkers)
-        condition = judo.random_state.random(low_val.shape) < 0.5
-        actions = numpy.where(condition, low_val, high_val)
-        self.update(actions=actions)
-
-
-class FMCPolicy(PolicyAPI):
-
-    default_inputs = {"init_actions": {}, "oobs": {}}
-
+class DummyFMCPolicy(PolicyAPI):
     def __init__(self, inner_swarm, **kwargs):
         self.inner_swarm = inner_swarm
-        super(FMCPolicy, self).__init__(**kwargs)
-
-    @property
-    def param_dict(self) -> StateDict:
-        pdict = self.inner_swarm.env.param_dict
-        return {**{"init_actions": dict(pdict["actions"])}, **pdict}
+        super(DummyFMCPolicy, self).__init__(**kwargs)
 
     def select_actions(self, **kwargs) -> Union[Tensor, StateData]:
-        if hasattr(self.inner_swarm.env.action_space, "n"):
-            return self._choose_majority()
-        init_actions = self.inner_swarm.get("init_actions")
-        return init_actions.mean(0)[np.newaxis, :]
+        return {}
 
-    def _choose_majority(self):
-        init_actions = judo.to_numpy(self.inner_swarm.get("init_actions"))
-        y = numpy.bincount(init_actions, minlength=self.inner_swarm.env.action_space.n)
-        most_used_action = judo.tensor([y.argmax()])
-        return most_used_action
+    def act(self, inplace: bool = True, **kwargs) -> Union[None, StateData]:
+        if not inplace:
+            return {}
 
 
 class EnvSwarm(EnvironmentAPI):
@@ -94,6 +60,43 @@ class EnvSwarm(EnvironmentAPI):
         else:
             return env_data
 
+    def step(self, **kwargs) -> StateData:
+        pass
+
+
+class JumpToBestTree(HistoryTree):
+    def __len__(self):
+        return len(self.graph.nodes)
+
+    def after_evolve(self):
+        pass
+
+    def after_env(self):
+        pass
+
+    def update_tree(self):
+        pass
+
+
+class JumpToBestEnv(EnvSwarm):
+    def make_transitions(self, inplace: bool = True, **kwargs) -> Union[None, StateData]:
+        return
+        self.swarm.state.import_walker(self.inner_swarm.root.data)
+        if hasattr(self.swarm, "root"):
+            self.swarm.root.update_root()
+
+        if not inplace:
+            return {}
+
+    def reset(
+        self,
+        inplace: bool = True,
+        root_walker: Optional[StateData] = None,
+        states: Optional[StateData] = None,
+        **kwargs,
+    ) -> Union[None, StateData]:
+        return super(JumpToBestEnv, self).make_transitions()
+
 
 class WalkersSwarm(WalkersAPI):
     def __init__(self, inner_swarm, **kwargs):
@@ -119,6 +122,47 @@ class WalkersSwarm(WalkersAPI):
         self.swarm.state.update(**walker)
 
 
+class JumpToBest(WalkersSwarm):
+    def run_epoch(self, inplace: bool = True, **kwargs) -> StateData:
+
+        super(JumpToBest, self).run_epoch(inplace=inplace, **kwargs)
+        print(
+            self.swarm.root.id_walker,
+            self.inner_swarm.root.id_walker,
+            self.inner_swarm.tree.data_tree.root_id,
+        )
+        root_graph = self.inner_swarm.tree.get_root_graph()
+        self.swarm.tree.data_tree.compose(root_graph)
+        self.swarm.state.update(**self.inner_swarm.root.data)
+        self.swarm.root.update_root()
+        print(
+            "self tree",
+            nx.is_tree(self.tree.graph),
+            "inner",
+            nx.is_tree(self.inner_swarm.tree.graph),
+            "root",
+            nx.is_tree(root_graph),
+        )
+        return {}
+
+    def reset(self, inplace: bool = True, **kwargs):
+        super(JumpToBest, self).reset(inplace=inplace, **kwargs)
+        root_graph = self.inner_swarm.tree.get_root_graph()
+        print(
+            "self tree",
+            nx.is_tree(self.tree.graph),
+            "inner",
+            nx.is_tree(self.inner_swarm.tree.graph),
+            "root",
+            nx.is_tree(root_graph),
+        )
+        self.swarm.tree.data_tree._data = root_graph
+        walker = self.inner_swarm.state.export_walker(0)
+        self.swarm.state.update(**walker)
+        self.swarm.root.reset()
+        self.swarm.root.update_root()
+
+
 class FMCSwarm(Swarm):
     walkers_last = False
 
@@ -135,7 +179,7 @@ class FMCSwarm(Swarm):
         # if hasattr(swarm.policy, "bounds"):
         #    swarm.register_callback(BoundaryInitAction())
         self._swarm = swarm
-        policy = FMCPolicy(swarm) if policy is None else policy
+        policy = DummyFMCPolicy(swarm) if policy is None else policy
         env = EnvSwarm(swarm) if env is None else env
         super(FMCSwarm, self).__init__(
             n_walkers=swarm.n_walkers,
@@ -144,7 +188,7 @@ class FMCSwarm(Swarm):
             callbacks=callbacks,
             minimize=minimize,
             max_epochs=int(max_epochs),
-            walkers=WalkersSwarm(swarm),
+            walkers=JumpToBest(swarm),
         )
 
     @property

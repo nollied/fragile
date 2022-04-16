@@ -21,7 +21,7 @@ check:
 .PHONY: test-parallel
 test-parallel:
 	find -name "*.pyc" -delete
-	DISABLE_DISTRIBUTED=True pytest -n $n -s -o log_cli=true -o log_cli_level=info
+	DISABLE_DISTRIBUTED=True pytest tests/core -n $n -s -o log_cli=true -o log_cli_level=info
 
 .PHONY: test-distributed
 test-distributed:
@@ -31,7 +31,7 @@ test-distributed:
 .PHONY: test
 test:
 	make test-parallel
-	make test-distributed
+	# make test-distributed
 
 .PHONY: test-codecov
 test-codecov:

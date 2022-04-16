@@ -309,15 +309,12 @@ class CMAES(NormalContinuous):
     def _init_algorithm_params(self, batch_size):
         self.pop_size = batch_size
         self.mu_const = self.pop_size / 2  # Number of parents/points for recombination
-        self.weights_const = (
-            numpy.log(self.mu_const + 0.5)
-            - numpy.log(
-                numpy.arange(1, self.mu_const + 1),
-            ).reshape((-1, 1))
-        )
+        self.weights_const = numpy.log(self.mu_const + 0.5) - numpy.log(
+            numpy.arange(1, self.mu_const + 1),
+        ).reshape((-1, 1))
         self.mu_const = int(numpy.floor(self.mu_const))
         self.weights_const = self.weights_const / numpy.sum(self.weights_const)
-        self.mu_eff_const = numpy.sum(self.weights_const) ** 2 / numpy.sum(self.weights_const ** 2)
+        self.mu_eff_const = numpy.sum(self.weights_const) ** 2 / numpy.sum(self.weights_const**2)
         # Parameters for adaptation
         self.cum_covm_const = (4 + self.mu_eff_const / self.n_dims) / (
             self.n_dims + 4 + 2 * self.mu_eff_const / self.n_dims
@@ -343,12 +340,12 @@ class CMAES(NormalContinuous):
             (self.n_dims, 1),
         )  # Diagonal matrix that defines the scaling
         self.cov_matrix = (
-            self.coords_matrix * numpy.diag(self.scaling_diag ** 2) * self.coords_matrix.T
+            self.coords_matrix * numpy.diag(self.scaling_diag**2) * self.coords_matrix.T
         )  # Covariance matrix
         self.invsqrtC = (
             self.coords_matrix * numpy.diag(1 / self.scaling_diag.flatten()) * self.coords_matrix.T
         )
         self.n_eigen_eval = 0  # Tracks update of coords_matrix and scaling_diag
-        self.chi_norm_const = self.n_dims ** 0.5 * (
-            1 - 1 / (4 * self.n_dims) + 1 / (21 * self.n_dims ** 2)
+        self.chi_norm_const = self.n_dims**0.5 * (
+            1 - 1 / (4 * self.n_dims) + 1 / (21 * self.n_dims**2)
         )

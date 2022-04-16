@@ -1,8 +1,55 @@
+from typing import Optional, Union
+
 from judo import random_state
 import numpy
 
 from fragile.core.policy import Gaussian
-from old_fragile.core.states import StatesEnv, StatesModel, StatesWalkers
+from fragile.core.typing import StateData, StateDict, Tensor
+
+
+class ParticleIntegration(Gaussian):
+    default_outputs = ("actions", "velocities")
+    default_inputs = {"velocities": {"clone": True}, "dt": {"optional": True}}
+
+    @property
+    def param_dict(self) -> StateDict:
+        params = super(ParticleIntegration, self).param_dict
+        if self.swarm is None:
+            return params
+        return {**{"velocities": self.swarm.env.param_dict["observs"]}, **params}
+
+    def act(self, inplace: bool = True, **kwargs) -> Union[None, StateData]:
+        """Calculate SwarmState containing the data needed to interact with the environment."""
+        action_input = self._prepare_tensors(**kwargs)
+        actions_data = self.select_actions(**action_input)
+        if not isinstance(actions_data, dict):
+            actions_data = {"actions": actions_data}
+        actions = actions_data["actions"]
+        actions_data["actions"] = self.env_bounds.clip(actions)
+        if inplace:
+            self.update(**actions_data)
+        else:
+            return actions_data
+
+    def select_actions(self, **kwargs) -> Union[Tensor, StateData]:
+        actions = super(ParticleIntegration, self).select_actions(**kwargs)
+        dt = self.get("dt", default=1.0, raise_error=False)
+        velocity_0 = self.get("velocities")
+        velocities = velocity_0 + actions * dt
+        actions = velocity_0 + velocities * dt
+        return {"velocities": velocities, "actions": actions}
+
+    def reset(
+        self,
+        inplace: bool = True,
+        root_walker: Optional[StateData] = None,
+        states: Optional[StateData] = None,
+        **kwargs,
+    ) -> Union[None, StateData]:
+        data = self.select_actions(**kwargs)
+        if inplace:
+            self.update(velocities=data["velocities"])
+        return data
 
 
 class ESModel(Gaussian):
@@ -43,11 +90,11 @@ class ESModel(Gaussian):
     def sample(
         self,
         batch_size: int,
-        model_states: StatesModel = None,
-        env_states: StatesEnv = None,
-        walkers_states: StatesWalkers = None,
+        model_states=None,
+        env_states=None,
+        walkers_states=None,
         **kwargs,
-    ) -> StatesModel:
+    ):
         """
         Calculate the corresponding data to interact with the Environment and \
         store it in model states.
@@ -147,11 +194,11 @@ class CMAES(Gaussian):
     def sample(
         self,
         batch_size: int,
-        model_states: StatesModel = None,
-        env_states: StatesEnv = None,
-        walkers_states: StatesWalkers = None,
+        model_states=None,
+        env_states=None,
+        walkers_states=None,
         **kwargs,
-    ) -> StatesModel:
+    ):
         """
         Calculate the corresponding data to interact with the Environment and \
         store it in model states.
@@ -259,11 +306,11 @@ class CMAES(Gaussian):
     def reset(
         self,
         batch_size: int = 1,
-        model_states: StatesModel = None,
-        env_states: StatesEnv = None,
+        model_states=None,
+        env_states=None,
         *args,
         **kwargs,
-    ) -> StatesModel:
+    ):
         """
         Return a new blank State for a `DiscreteUniform` instance, and a valid \
         prediction based on that new state.
@@ -309,15 +356,12 @@ class CMAES(Gaussian):
     def _init_algorithm_params(self, batch_size):
         self.pop_size = batch_size
         self.mu_const = self.pop_size / 2  # Number of parents/points for recombination
-        self.weights_const = (
-            numpy.log(self.mu_const + 0.5)
-            - numpy.log(
-                numpy.arange(1, self.mu_const + 1),
-            ).reshape((-1, 1))
-        )
+        self.weights_const = numpy.log(self.mu_const + 0.5) - numpy.log(
+            numpy.arange(1, self.mu_const + 1),
+        ).reshape((-1, 1))
         self.mu_const = int(numpy.floor(self.mu_const))
         self.weights_const = self.weights_const / numpy.sum(self.weights_const)
-        self.mu_eff_const = numpy.sum(self.weights_const) ** 2 / numpy.sum(self.weights_const ** 2)
+        self.mu_eff_const = numpy.sum(self.weights_const) ** 2 / numpy.sum(self.weights_const**2)
         # Parameters for adaptation
         self.cum_covm_const = (4 + self.mu_eff_const / self.n_dims) / (
             self.n_dims + 4 + 2 * self.mu_eff_const / self.n_dims
@@ -343,12 +387,12 @@ class CMAES(Gaussian):
             (self.n_dims, 1),
         )  # Diagonal matrix that defines the scaling
         self.cov_matrix = (
-            self.coords_matrix * numpy.diag(self.scaling_diag ** 2) * self.coords_matrix.T
+            self.coords_matrix * numpy.diag(self.scaling_diag**2) * self.coords_matrix.T
         )  # Covariance matrix
         self.invsqrtC = (
             self.coords_matrix * numpy.diag(1 / self.scaling_diag.flatten()) * self.coords_matrix.T
         )
         self.n_eigen_eval = 0  # Tracks update of coords_matrix and scaling_diag
-        self.chi_norm_const = self.n_dims ** 0.5 * (
-            1 - 1 / (4 * self.n_dims) + 1 / (21 * self.n_dims ** 2)
+        self.chi_norm_const = self.n_dims**0.5 * (
+            1 - 1 / (4 * self.n_dims) + 1 / (21 * self.n_dims**2)
         )

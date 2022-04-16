@@ -3,7 +3,6 @@ import copy
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union
 
 import judo
-from judo.data_types import dtype
 from judo.functions.random import random_state
 from judo.judo_backend import Backend
 import networkx as nx
@@ -11,9 +10,11 @@ import numpy
 import numpy as np
 
 from fragile.callbacks.data_tracking import TrackWalkersId
-from fragile.core.api_classes import Callback
 from fragile.core.state import SwarmState
-from fragile.core.typing import NamesData, NodeData, NodeDataGenerator, NodeId, Tensor
+from fragile.core.typing import InputDict, NamesData, NodeData, NodeDataGenerator, NodeId, Tensor
+
+
+DEFAULT_ROOT_ID = ""
 
 
 def to_node_id(x):
@@ -27,7 +28,7 @@ def to_node_id(x):
 class BaseTree:
     """Data structure in charge of storing the history of visited states of an algorithm run."""
 
-    def __init__(self, root_id):
+    def __init__(self, root_id=DEFAULT_ROOT_ID):
         """
         Initialize a :class:`BaseTree`.
 
@@ -61,6 +62,8 @@ class BaseTree:
         the trajectories sampled by the :class:`Swarm`.
 
         Args:
+            node_ids: List of states hashes representing the node_ids of \
+                the current states.
             parent_ids: List of states hashes representing the parent nodes of \
                         the current states.
             n_iter: Number of iteration of the algorithm when the data was sampled.
@@ -90,6 +93,7 @@ class NetworkxTree(BaseTree):
     using a networkx DiGraph to keep track of the states relationships.
     """
 
+    DEFAULT_ROOT_ID = DEFAULT_ROOT_ID
     DEFAULT_NEXT_PREFIX = "next_"
     DEFAULT_NODE_DATA = (
         "observs",
@@ -104,7 +108,7 @@ class NetworkxTree(BaseTree):
         self,
         names: NamesData = None,
         prune: bool = False,
-        root_id: NodeId = 0,
+        root_id: NodeId = DEFAULT_ROOT_ID,
         node_names: NamesData = DEFAULT_NODE_DATA,
         edge_names: NamesData = DEFAULT_EDGE_DATA,
         next_prefix: str = DEFAULT_NEXT_PREFIX,
@@ -168,15 +172,21 @@ class NetworkxTree(BaseTree):
         self.reset_graph(root_id=to_node_id(root_id), node_data=node_data, epoch=-1)
 
     def update(
-        self, node_ids: List[NodeId], parent_ids: List[NodeId], n_iter: int = None, **kwargs
+        self,
+        node_ids: List[NodeId],
+        parent_ids: List[NodeId],
+        n_iter: int = None,
+        **kwargs,
     ):
         """
         Update the history of the tree adding the necessary data to recreate a \
         the trajectories sampled by the :class:`Swarm`.
 
         Args:
+            node_ids: List of states hashes representing the node_ids of \
+                the current states.
             parent_ids: List of states hashes representing the parent nodes of \
-                        the current states.
+                the current states.
             n_iter: Number of iteration of the algorithm when the data was sampled.
             kwargs: Keyword arguments representing different :class:`States` instances.
 
@@ -405,7 +415,7 @@ class NetworkxTree(BaseTree):
         """Return a list containing all the node ids of the leaves of the tree."""
         return tuple(node for node in self.data.nodes if len(self.data.out_edges([node])) == 0)
 
-    def compose(self, other: "NetworkxTree") -> None:
+    def compose(self, other: Union["NetworkxTree", nx.Graph]) -> None:
         """
         Compose the graph of another :class:`BaseNetworkxTree` with the graph of \
         the current instance.
@@ -424,7 +434,8 @@ class NetworkxTree(BaseTree):
             None
 
         """
-        self.data = nx.compose(self.data, other.data)
+        graph = other.data if isinstance(other, NetworkxTree) else other
+        self.data = nx.compose(copy.deepcopy(self.data), copy.deepcopy(graph))
 
     def _update_prune_sentinel(self):
         children_edges = self.data.out_edges([self._prune_sentinel])
@@ -485,7 +496,7 @@ class DataTree(NetworkxTree):
         self,
         names: NamesData = None,
         prune: bool = False,
-        root_id: NodeId = 0,
+        root_id: NodeId = DEFAULT_ROOT_ID,
         node_names: NamesData = NetworkxTree.DEFAULT_NODE_DATA,
         edge_names: NamesData = NetworkxTree.DEFAULT_EDGE_DATA,
         next_prefix: str = NetworkxTree.DEFAULT_NEXT_PREFIX,
@@ -654,8 +665,8 @@ class DataTree(NetworkxTree):
 
         """
         with Backend.use_backend("numpy"):
-            permutaion = random_state.permutation(list(self.data.nodes))
-        for next_node in permutaion:
+            permutation = random_state.permutation(list(self.data.nodes))
+        for next_node in permutation:
             if next_node == self.root_id:
                 continue
             node = self.get_parent(next_node)
@@ -777,7 +788,7 @@ class HistoryTree(TrackWalkersId):
         self,
         names: NamesData = None,
         prune: bool = False,
-        root_id: NodeId = 0,
+        root_id: NodeId = DEFAULT_ROOT_ID,
         node_names: NamesData = None,
         edge_names: NamesData = ("actions", "dt"),
         next_prefix: str = NetworkxTree.DEFAULT_NEXT_PREFIX,
@@ -791,6 +802,22 @@ class HistoryTree(TrackWalkersId):
         self.next_prefix = next_prefix
         self._tree = None
         super(HistoryTree, self).__init__(**kwargs)
+
+    @property
+    def graph(self) -> nx.Graph:
+        return self._tree.data
+
+    @property
+    def data_tree(self):
+        return self._tree
+
+    @property
+    def inputs(self) -> InputDict:
+        inputs = super(HistoryTree, self).inputs
+        if self.names is None:
+            return inputs
+        clones = {n: {"clone": True} for n in self.names}
+        return {**inputs, **clones}
 
     def __getattr__(self, item):
         try:
@@ -811,10 +838,6 @@ class HistoryTree(TrackWalkersId):
             f"Nodes {len(tree)} Leafs {len(tree.leafs)}"
         )
         return string
-
-    @property
-    def graph(self) -> nx.Graph:
-        return self._tree.data
 
     def setup(self, swarm):
         super(HistoryTree, self).setup(swarm)
@@ -843,10 +866,12 @@ class HistoryTree(TrackWalkersId):
             n_iter=self.swarm.epoch,
             state=self.swarm.state,
         )
-        self._tree.prune_tree(alive_leafs=id_walkers)
+
+    def before_walkers(self):
+        self.update_tree()
 
     def after_evolve(self):
-        self.update_tree()
+        self._tree.prune_tree(alive_leafs=self.get("id_walkers"))
 
     def after_reset(self):
         if hasattr(self.swarm, "root"):
@@ -877,5 +902,11 @@ class HistoryTree(TrackWalkersId):
         """
 
         return self._tree.iterate_branch(
-            node_id=self.swarm.root.id_walker, batch_size=batch_size, names=names
+            node_id=self.swarm.root.id_walker,
+            batch_size=batch_size,
+            names=names,
         )
+
+    def get_root_graph(self):
+        root_path_nodes = self.data_tree.get_path_node_ids(self.swarm.root.id_walkers)
+        return copy.deepcopy(self.graph.subgraph(root_path_nodes))

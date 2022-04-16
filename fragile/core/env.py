@@ -1,12 +1,12 @@
 from typing import Callable, Optional, Tuple, Union
 
 import judo
-from judo import Backend, Bounds, dtype, random_state, tensor, typing
+from judo import Bounds, dtype, random_state, typing
 import numpy
 from plangym.core import PlanEnvironment
 
 from fragile.core.api_classes import EnvironmentAPI, SwarmAPI
-from fragile.core.typing import InputDict, StateData, StateDict
+from fragile.core.typing import InputDict, StateData, StateDict, Tensor
 
 
 _no_value = "__no_value__"
@@ -135,6 +135,8 @@ class Function(EnvironmentAPI):
         bounds: Union[Bounds, "gym.spaces.box.Box"],
         custom_domain_check: Callable[[typing.Tensor, typing.Tensor, int], typing.Tensor] = None,
         actions_as_perturbations: bool = True,
+        start_same_pos: bool = False,
+        x0: Tensor = None,
     ):
         """
         Initialize a :class:`Function`.
@@ -164,6 +166,8 @@ class Function(EnvironmentAPI):
         self._action_space = self.bounds.to_space()
         self.custom_domain_check = custom_domain_check
         self._actions_as_perturbations = actions_as_perturbations
+        self._x0 = x0
+        self.start_same_pos = start_same_pos
         super(Function, self).__init__(
             observs_shape=self.shape,
             observs_dtype=dtype.float32,
@@ -269,6 +273,10 @@ class Function(EnvironmentAPI):
         """
         if root_walker is None:
             new_points = self.sample_action(batch_size=self.swarm.n_walkers)
+            if self._x0 is not None:
+                new_points[:] = self._x0
+            elif self.start_same_pos:
+                new_points[:] = new_points[0]
             actions = judo.zeros_like(new_points) if self._actions_as_perturbations else new_points
             rewards = self.function(new_points).flatten()
         else:

@@ -13,7 +13,10 @@ class PlotRootWalker(PlotCallback):
         self._image_available = False
         self.table = Table(title="Run Summary", height=50)
         self.curve = Curve(
-            data_names=["epoch", "score"], title="Score", xlabel="Epoch", ylabel="Score"
+            data_names=["epoch", "score"],
+            title="Score",
+            xlabel="Epoch",
+            ylabel="Score",
         )
         self.image = None
         self._last_score = -numpy.inf
@@ -43,7 +46,8 @@ class PlotRootWalker(PlotCallback):
         )
         self.table.send(summary_table)
         score_data = pd.DataFrame(
-            columns=["epoch", "score"], data=[[self.swarm.epoch, current_score]]
+            columns=["epoch", "score"],
+            data=[[self.swarm.epoch, current_score]],
         )
         self.curve.send(score_data)
         if self._image_available and current_score != self._last_score:
@@ -55,7 +59,7 @@ class PlotRootWalker(PlotCallback):
         self._last_score = float(current_score)
 
     def panel(self):
-        summary = panel.Column(self.table.plot, self.curve.plot)
+        summary = panel.Row(self.table.plot, self.curve.plot)
         if self._image_available:
             return panel.Row(summary, self.image.plot)
         return summary

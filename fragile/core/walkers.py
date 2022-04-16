@@ -1,7 +1,8 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import judo
 from judo import dtype, random_state, tensor
+import numpy
 
 from fragile.core.api_classes import WalkersAPI, WalkersMetric
 from fragile.core.fractalai import fai_iteration, relativize
@@ -33,7 +34,13 @@ class SimpleWalkers(WalkersAPI):
         super(SimpleWalkers, self).__init__(**kwargs)
 
     def run_epoch(
-        self, observs, rewards, scores, oobs=None, inplace: bool = True, **kwargs
+        self,
+        observs,
+        rewards,
+        scores,
+        oobs=None,
+        inplace: bool = True,
+        **kwargs,
     ) -> StateData:
         scores = rewards + scores if self.accumulate_reward else rewards
         sign_scores = -1.0 * scores if self.minimize else scores
@@ -95,7 +102,7 @@ class SonicScore(ScoreMetric):
     def score_from_info(info):
         try:
             score = info["score"] + 10000 * info["x"] / info["screen_x_end"] + 100 * info["rings"]
-        except Exception as e:
+        except Exception:
             return info["score"] + 10 * info["x"] + 100 * info["rings"]
 
         return score
@@ -116,7 +123,10 @@ class RandomDistance(DiversityMetric):
     def calculate(self, observs, oobs, **kwargs):
         n_walkers = self.swarm.n_walkers
         compas = self.swarm.walkers.get_in_bounds_compas(oobs=oobs)
-        obs = observs.reshape(n_walkers, -1)
+        obs = judo.astype(observs.reshape(n_walkers, -1), dtype.float32)
+        if hasattr(self.swarm.env, "bounds"):
+            deltas = self.swarm.env.bounds.pbc_distance(obs, obs[compas])
+            return {"diversities": numpy.linalg.norm(deltas, axis=1).flatten()}
         return {"diversities": l2_norm(obs, obs[compas]).flatten()}
 
 
@@ -145,12 +155,14 @@ class Walkers(WalkersAPI):
         diversity_scale: float = 1.0,
         track_data=None,
         accumulate_reward: bool = True,
+        clone_period: int = 1,
         **kwargs,
     ):
 
         self.minimize = minimize
         self.score_scale = score_scale
         self.diversity_scale = diversity_scale
+        self.clone_period = clone_period
         self.score = (
             score if score is not None else RewardScore(accumulate_reward=accumulate_reward)
         )
@@ -181,6 +193,10 @@ class Walkers(WalkersAPI):
         self.score.setup(swarm)
         self.minimize = swarm.minimize
 
+    def balance(self, inplace: bool = True, **kwargs) -> Union[None, StateData]:
+        if self.swarm.epoch % self.clone_period == 0 or self.swarm.epoch == 0:
+            return super(Walkers, self).balance(inplace=inplace, **kwargs)
+
     def run_epoch(self, inplace: bool = True, oobs=None, **kwargs):
         scores = self.score(**kwargs)
         diversities = self.diversity(oobs=oobs, **kwargs)
@@ -195,7 +211,7 @@ class Walkers(WalkersAPI):
         scores = -1.0 * scores if self.minimize else scores
         norm_scores = relativize(scores)
         norm_diver = relativize(diversities)
-        virtual_rewards = norm_scores ** self.score_scale * norm_diver ** self.diversity_scale
+        virtual_rewards = norm_scores**self.score_scale * norm_diver**self.diversity_scale
         return {"virtual_rewards": virtual_rewards}
 
     def calculate_clones(self, virtual_rewards, oobs=None):
@@ -222,3 +238,21 @@ class Walkers(WalkersAPI):
         super(Walkers, self).reset(inplace=inplace, **kwargs)
         self.score.reset(**kwargs)
         self.diversity.reset(**kwargs)
+
+
+class NoBalance(Walkers):
+    @property
+    def param_dict(self) -> StateDict:
+        return self.score.param_dict
+
+    @property
+    def inputs(self) -> InputDict:
+        return self.score.inputs
+
+    @property
+    def outputs(self) -> Tuple[str, ...]:
+        return self.score.outputs
+
+    def run_epoch(self, inplace: bool = True, oobs=None, **kwargs):
+        scores = self.score(**kwargs)
+        return scores

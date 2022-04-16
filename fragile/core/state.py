@@ -162,7 +162,7 @@ class State:
             return default
         return self[name]
 
-    def keys(self) -> "_dict_keys[str, Dict[str, Any]]":
+    def keys(self) -> "_dict_keys[str, Dict[str, Any]]":  # pyflakes: disable=F821
         """Return a generator for the values of the stored data."""
         return self.param_dict.keys()
 
