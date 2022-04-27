@@ -83,9 +83,12 @@ class BestWalker(RootWalker):
 
     def fix_root(self):
         if self._fix_root:
-            self.swarm.state.import_walker(self.data)
+            self.swarm.state.import_walker(copy.deepcopy(self.data))
 
-    def after_env(self):
+    # def after_env(self):
+    #    self.fix_root()
+
+    def after_walkers(self):
         self.fix_root()
 
 

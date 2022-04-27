@@ -72,3 +72,60 @@ class PlotRootWalker(PlotCallback):
     def reset(self, root_walker=None, state=None, **kwargs):
         self.curve.data_stream.clear()
         return super(PlotRootWalker, self).reset(root_walker=root_walker, state=state, **kwargs)
+
+
+class PlotMario(PlotRootWalker):
+    def __init__(self, **kwargs):
+        super(PlotRootWalker, self).__init__(**kwargs)
+        self._image_available = False
+        self.run_table = Table(title="Run Summary", height=50)
+        self.info_table = Table(title="State info", height=50, width=600)
+        self.curve = Curve(
+            data_names=["epoch", "score"],
+            title="Score",
+            xlabel="Epoch",
+            ylabel="Score",
+        )
+        self.image = None
+        self._last_score = -numpy.inf
+
+    def send(self):
+        current_score = self.root.score
+        summary_table = pd.DataFrame(
+            columns=["epoch", "best_score", "pct_oobs"],
+            data=[[self.swarm.epoch, current_score, self.get("oobs").mean()]],
+        )
+        info_df = pd.DataFrame(
+            columns=list(self.root.info.keys()),
+            data=[list(self.root.info.values())],
+        )
+        self.info_table.send(info_df)
+        self.run_table.send(summary_table)
+        score_data = pd.DataFrame(
+            columns=["epoch", "score"],
+            data=[[self.swarm.epoch, current_score]],
+        )
+        self.curve.send(score_data)
+        if self._image_available and (
+            current_score != self._last_score or self.root.always_update
+        ):
+            if "rgb" in self.root.data:
+                img_data = self.root.rgb
+            else:
+                img_data = self.image_from_state(self.root.state)
+            self.image.send(img_data)
+        self._last_score = float(current_score)
+
+    def panel(self):
+        summary = panel.Row(self.run_table.plot, self.info_table.plot)
+        plot_row = (
+            panel.Row(self.curve.plot, self.image.plot)
+            if self._image_available
+            else self.curve.plot
+        )
+        return panel.Column(summary, plot_row)
+
+    def image_from_state(self, state):
+        self.swarm.env.plangym_env.set_state(state)
+        # self.swarm.env.plangym_env.step(0)
+        return self.swarm.env.plangym_env.get_image().astype(numpy.uint8)

@@ -3,7 +3,7 @@ from typing import Callable, Optional, Tuple, Union
 import judo
 from judo import Bounds, dtype, random_state, typing
 import numpy
-from plangym.core import PlanEnvironment
+from plangym.core import PlangymEnv as _PlangymEnv
 
 from fragile.core.api_classes import EnvironmentAPI, SwarmAPI
 from fragile.core.typing import InputDict, StateData, StateDict, Tensor
@@ -13,7 +13,7 @@ _no_value = "__no_value__"
 
 
 class PlangymEnv(EnvironmentAPI):
-    def __init__(self, plangym_env: PlanEnvironment, swarm: Optional[SwarmAPI] = None):
+    def __init__(self, plangym_env: _PlangymEnv, swarm: Optional[SwarmAPI] = None):
         self._plangym_env = plangym_env
         state, obs = plangym_env.reset()
         *_, infos = plangym_env.step(plangym_env.sample_action())

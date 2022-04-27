@@ -3,6 +3,7 @@ from typing import Optional, Tuple, Union
 import judo
 from judo import dtype, random_state, tensor
 import numpy
+import numpy as np
 
 from fragile.core.api_classes import WalkersAPI, WalkersMetric
 from fragile.core.fractalai import fai_iteration, relativize
@@ -68,8 +69,9 @@ class ScoreMetric(WalkersMetric):
 class RewardScore(ScoreMetric):
     default_inputs = {"rewards": {}}
 
-    def __init__(self, accumulate_reward: bool = True, **kwargs):
+    def __init__(self, accumulate_reward: bool = True, keep_max_reward: bool = False, **kwargs):
         self.accumulate_reward = accumulate_reward
+        self.keep_max_reward = keep_max_reward
         super(RewardScore, self).__init__(**kwargs)
 
     @property
@@ -81,6 +83,8 @@ class RewardScore(ScoreMetric):
 
     def calculate(self, rewards, scores=None, **kwargs):
         values = rewards + scores if self.accumulate_reward else rewards
+        if self.keep_max_reward and scores is not None:
+            values = np.maximum(values, scores)
         return {"scores": values}
 
     def reset(
@@ -155,6 +159,7 @@ class Walkers(WalkersAPI):
         diversity_scale: float = 1.0,
         track_data=None,
         accumulate_reward: bool = True,
+        keep_max_reward: bool = False,
         clone_period: int = 1,
         **kwargs,
     ):
@@ -164,7 +169,9 @@ class Walkers(WalkersAPI):
         self.diversity_scale = diversity_scale
         self.clone_period = clone_period
         self.score = (
-            score if score is not None else RewardScore(accumulate_reward=accumulate_reward)
+            score
+            if score is not None
+            else RewardScore(accumulate_reward=accumulate_reward, keep_max_reward=keep_max_reward)
         )
         self.accumulate_reward = self.score.accumulate_reward
         self.diversity = diversity if diversity is not None else RandomDistance()
