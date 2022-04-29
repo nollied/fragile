@@ -125,6 +125,56 @@ class StreamingPlot:
             return plot.opts(**self.opts_kwargs)
 
 
+class Div(StreamingPlot):
+    default_opts = {
+        "framewise": True,
+        "axiswise": True,
+        "normalize": True,
+    }
+
+    name = "Div"
+    default_bokeh_opts = {
+        "height": 350,
+        "width": 350,
+    }
+
+    def __init__(
+        self,
+        data=None,
+        plot=holoviews.Div,
+        **kwargs,
+    ):
+        """
+        Initialize a :class:`Table`.
+
+        Args:
+            data: Data to initialize the stream.
+            stream: :class:`holoviews.stream` type. Defaults to :class:`Pipe`.
+            bokeh_opts: Default options for the plot when rendered using the "bokeh" backend.
+            mpl_opts: Default options for the plot when rendered using the "matplotlib" backend.
+            **kwargs: Passed to :class:`StreamingPlot`.
+
+        """
+        super(Div, self).__init__(
+            plot=plot,
+            data=data,
+            **kwargs,
+        )
+
+    def get_default_data(self):
+        return ""
+
+    def opts(self, plot=None, **kwargs):
+        """Update the plot parameters. Same as `holoviews` `opts`."""
+        if self.plot is None:
+            return
+        self.common_kwargs.update(kwargs)
+        if plot is None:
+            self.plot = self.plot.opts(holoviews.opts.Div(**self.opts_kwargs))
+        else:
+            return plot.opts(holoviews.opts.Div(**self.opts_kwargs))
+
+
 class Table(StreamingPlot):
     """``holoviews.Table`` with data streaming capabilities."""
 

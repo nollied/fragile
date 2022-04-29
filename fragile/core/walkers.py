@@ -1,4 +1,5 @@
-from typing import Optional, Tuple, Union
+from collections import defaultdict
+from typing import Any, Dict, Optional, Tuple, Union
 
 import judo
 from judo import dtype, random_state, tensor
@@ -84,7 +85,9 @@ class RewardScore(ScoreMetric):
     def calculate(self, rewards, scores=None, **kwargs):
         values = rewards + scores if self.accumulate_reward else rewards
         if self.keep_max_reward and scores is not None:
-            values = np.maximum(values, scores)
+            values = (
+                np.minimum(values, scores) if self.swarm.minimize else np.maximum(values, scores)
+            )
         return {"scores": values}
 
     def reset(
@@ -104,10 +107,47 @@ class SonicScore(ScoreMetric):
 
     @staticmethod
     def score_from_info(info):
-        try:
-            score = info["score"] + 10000 * info["x"] / info["screen_x_end"] + 100 * info["rings"]
-        except Exception:
-            return info["score"] + 10 * info["x"] + 100 * info["rings"]
+        not_in_bonus_level = not (info.get("in_bonus_level") or info.get("in_transition_screen"))
+        if info.get("in_boss_fight", False):
+            score_x = 1010
+        elif info.get("in_bonus_level"):
+            score_x = 1002
+        elif info.get("in_transition_screen"):
+            score_x = 1008
+        else:
+            score_x = 1000 * min(info.get("x", 0) / max(info.get("screen_x_end", 1), 1), 1)
+        score = (
+            info.get("score", 0)
+            + score_x
+            + 10 * info.get("rings", 0)
+            + 1001 * (info.get("act", 0) if (not_in_bonus_level and not info.get("in_transition_screen")) else info.get("act", 0) - 1)
+            + 5000 * info.get("zone", 0)
+            + 1000 * info.get("lives", 0)
+        )
+        return int(score)
+
+    def calculate(self, rewards, scores=None, **kwargs):
+        scores = tensor([self.score_from_info(info) for info in self.get("infos")])
+        return {"scores": scores}
+
+
+class MarioScore(ScoreMetric):
+    name = "MarioScore"
+    accumulate_reward = False
+    default_inputs = {"rewards": {}, "infos": {}}
+
+    @staticmethod
+    def score_from_info(info):
+        score = (
+            (info.get("world", 0) * 25000)
+            + (info.get("stage", 0) * 5000)
+            + info.get("x_pos", 0)
+            + 10 * int(bool(info.get("in_pipe", 0)))
+            + 100 * int(bool(info.get("flag_get", 0)))
+            + 10 * info.get("coins", 0)
+            + info["life"] * 1000
+            # + (abs(info["x_pos"] - info["x_position_last"]))
+        )
 
         return score
 
@@ -245,6 +285,41 @@ class Walkers(WalkersAPI):
         super(Walkers, self).reset(inplace=inplace, **kwargs)
         self.score.reset(**kwargs)
         self.diversity.reset(**kwargs)
+
+
+class ExplorationWalkers(Walkers):
+    def __init__(self, exploration_scale: float = 1.0, **kwargs):
+        super(ExplorationWalkers, self).__init__(**kwargs)
+        self._explore_counts = defaultdict(0)
+        self.exploration_scale = exploration_scale
+
+    @property
+    def explore_counts(self) -> Dict[Any, int]:
+        return self._explore_counts
+
+    def calculate_virtual_reward(self, scores, diversities, **kwargs):
+        """Apply the virtual reward formula to account for all the different goal scores."""
+        vr_dict = super(ExplorationWalkers, self).calculate_virtual_reward(
+            scores, diversities, **kwargs
+        )
+        explore_reward = relativize(self.get_explore_rewards())
+        virtual_rewards = vr_dict["virtual_rewards"] * explore_reward**self.exploration_scale
+        return {"virtual_rewards": virtual_rewards}
+
+    def get_explore_rewards(self):
+        coords_keys = self.get_coords_keys()
+        for key in coords_keys:
+            self._explore_counts[key] += 1
+        return 1 / judo.tensor([self.explore_counts[k] for k in coords_keys])
+
+    def get_coords_keys(self):
+        keys = []
+        for info in self.get("infos"):
+            in_bonus_level = info.get("screen_x_end", 1) == 0 and info.get("x", -1) != 0
+            act = info.get("act") if not in_bonus_level else 0.5
+            key = (info.get("zone"), act, int(info.get("x", 0) / 100), int(info.get("y", 0) / 100))
+            keys.append(key)
+        return keys
 
 
 class NoBalance(Walkers):

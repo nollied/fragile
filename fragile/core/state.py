@@ -1,6 +1,7 @@
 import copy
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union
 
+import judo
 from judo import tensor
 from judo.functions.api import API
 from judo.functions.hashing import hasher
@@ -20,7 +21,7 @@ _BASE_SLOTS = (
 
 class State:
     """
-    Data structure that handles teh data that defines a population of agents.
+    Data structure that handles the data defining a population of agents.
 
     Each population attribute will be stored as a tensor with its first dimension \
     (batch size) representing each agent.
@@ -316,9 +317,9 @@ class SwarmState(State):
     def import_walker(self, data: Dict[str, Tensor], index: int = 0):
         for name, tensor_ in data.items():
             if name in self.tensor_names:
-                self[name][[index]] = tensor_
+                self[name][[index]] = judo.copy(tensor_)
             else:
-                self[name][index] = tensor_
+                self[name][index] = judo.copy(tensor_)
 
     def reset(self, root_walker: Optional[Dict[str, Tensor]] = None) -> None:
         """Reset the values of the class"""
@@ -326,6 +327,6 @@ class SwarmState(State):
         if root_walker:
             for name, array in root_walker.items():
                 if name in self.tensor_names:
-                    self[name][:] = array
+                    self[name][:] = judo.copy(array)
                 else:
-                    self[name] = [array[0] for _ in range(self.n_walkers)]
+                    self[name] = copy.deepcopy([array[0] for _ in range(self.n_walkers)])

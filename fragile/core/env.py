@@ -1,3 +1,4 @@
+import copy
 from typing import Callable, Optional, Tuple, Union
 
 import judo
@@ -45,7 +46,7 @@ class PlangymEnv(EnvironmentAPI):
         return self._states_dtype
 
     @property
-    def plangym_env(self) -> "PlanEnvironment":
+    def plangym_env(self) -> _PlangymEnv:
         return self._plangym_env
 
     @property
@@ -98,8 +99,8 @@ class PlangymEnv(EnvironmentAPI):
             terminals = [info["terminal"] for info in infos] if "terminal" in infos[0] else oobs
             states_data["terminals"] = terminals
         if self.has_rgb:
-            terminals = [info["rgb"] for info in infos]
-            states_data["rgb"] = terminals
+            rgbs = [info["rgb"] for info in infos]
+            states_data["rgb"] = rgbs
         return states_data
 
     def reset(
@@ -111,8 +112,8 @@ class PlangymEnv(EnvironmentAPI):
     ):
         if root_walker is None:
             state, observs = self.plangym_env.reset()
-            new_states = [state for _ in range(len(self.swarm))]
-        else:
+            new_states = [copy.deepcopy(state) for _ in range(len(self.swarm))]
+        else:  # TODO: test this
             new_states = self.get("states")
             observs = self.get("observs")
         if inplace:
