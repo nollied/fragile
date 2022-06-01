@@ -122,6 +122,11 @@ class StatesEnv(States):
         return params
 
 
+    def hash_walkers(self, hash_arg: str):
+        # TODO: this is not general at all. in fact, it requires that the states are represented as a numpy array of tuple objects!
+        return tuple(self.states)
+
+
 class StatesModel(States):
     """
     Keeps track of the data structures used by the :class:`Model`.
